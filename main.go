@@ -11,6 +11,7 @@ import (
 func init() {
 	initializers.LoadEnvVariables()
 	initializers.ConnectToDatabase()
+	controllers.InitAuthController()
 }
 
 func main() {

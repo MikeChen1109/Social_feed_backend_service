@@ -1,14 +1,9 @@
 package controllers
 
 import (
-	"myApp/SocialFeed/initializers"
-	"myApp/SocialFeed/models"
-	"os"
-	"time"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
-	"golang.org/x/crypto/bcrypt"
 )
 
 func Signup(c *gin.Context) {
@@ -22,38 +17,10 @@ func Signup(c *gin.Context) {
 		return
 	}
 
-	if body.UsearName == "" || body.Password == "" {
-		c.JSON(400, gin.H{"error": "Username and password are required"})
-		return
-	}
-
-	hash, err := bcrypt.GenerateFromPassword([]byte(body.Password), bcrypt.DefaultCost)
+	err := authService.Signup(body.UsearName, body.Password)
 
 	if err != nil {
-		c.JSON(500, gin.H{"error": "Failed to hash password"})
-		return
-	}
-
-	user := models.User{
-		Username: body.UsearName,
-		Password: string(hash),
-	}
-
-	// Check if user already exists
-	var existingUser models.User
-	result := initializers.DB.Where("username = ?", user.Username).First(&existingUser)
-	if result.Error == nil {
-		c.JSON(400, gin.H{"error": "Username already exists"})
-		return
-	} else if result.Error != nil && result.Error.Error() != "record not found" {
-		c.JSON(500, gin.H{"error": "Database error"})
-		return
-	}
-
-	result = initializers.DB.Create(&user)
-
-	if result.Error != nil {
-		c.JSON(500, gin.H{"error": "Failed to create user"})
+		c.JSON(err.StatusCode, gin.H{"error": err.Message})
 		return
 	}
 
@@ -71,37 +38,12 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	if body.Username == "" || body.Password == "" {
-		c.JSON(400, gin.H{"error": "Username and password are required"})
-		return
-	}
-
-	var user models.User
-	result := initializers.DB.Where("username = ?", body.Username).First(&user)
-
-	if result.Error != nil {
-		if result.Error.Error() == "record not found" {
-			c.JSON(404, gin.H{"error": "User not found"})
-		} else {
-			c.JSON(500, gin.H{"error": "Database error"})
-		}
-		return
-	}
-
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(body.Password)); err != nil {
-		c.JSON(401, gin.H{"error": "Invalid password"})
-		return
-	}
-
-	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub": user.ID,
-		"exp": time.Now().Add(time.Hour * 24 * 7).Unix() , // Token valid for 72 hours
-	}).SignedString([]byte(os.Getenv("SECRET")))
+	token, err := authService.Login(body.Username, body.Password)
 
 	if err != nil {
-		c.JSON(500, gin.H{"error": "Failed to create token"})
+		c.JSON(err.StatusCode, gin.H{"error": err.Message})
 		return
 	}
 
-	c.JSON(200, gin.H{"message": "Login successful", "token": token})
+	c.JSON(http.StatusOK, gin.H{"token": token})
 }
