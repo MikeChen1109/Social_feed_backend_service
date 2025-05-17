@@ -1,6 +1,7 @@
 package main
 
 import (
+	"myApp/SocialFeed/controllers"
 	"myApp/SocialFeed/initializers"
 
 	"github.com/gin-gonic/gin"
@@ -8,14 +9,17 @@ import (
 
 func init() {
 	initializers.LoadEnvVariables()
+	initializers.ConnectToDatabase()
 }
 
 func main() {
 	router := gin.Default()
-	router.GET("/", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"message": "pong",
-		})
-	})
+
+	router.POST("/createFeed", controllers.CreateFeed)
+	router.GET("/feeds", controllers.GetFeeds)
+	router.GET("/feeds/:id", controllers.GetFeedByID)
+	router.PUT("/feeds/:id", controllers.UpdateFeed)
+	router.DELETE("/feeds/:id", controllers.DeleteFeed)
+
 	router.Run()
 }
