@@ -13,7 +13,12 @@ func CreateFeed(c *gin.Context) {
 		Content string
 	}
 
-	c.Bind(&body)
+	if err := c.Bind(&body); err != nil {
+		c.JSON(400, gin.H{
+			"error": "Invalid request body",
+		})
+		return
+	}
 
 	if body.Title == "" || body.Content == "" {
 		c.JSON(400, gin.H{
@@ -22,7 +27,19 @@ func CreateFeed(c *gin.Context) {
 		return
 	}
 	
-	feed := models.Feed{AuthorName: "John Doe", AuthorID: 001, Title: body.Title, Content: body.Content}
+	user, exists := c.Get("user")
+	if !exists {
+		c.JSON(401, gin.H{
+			"error": "Unauthorized: User not found",
+		})
+		return
+	}
+
+
+	feed := models.Feed{AuthorName: user.(models.User).Username,
+					    AuthorID: user.(models.User).ID,
+					    Title: body.Title,
+					    Content: body.Content}
 	result := initializers.DB.Create(&feed)
 
 	if result.Error != nil {
