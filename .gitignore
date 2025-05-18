@@ -6,11 +6,13 @@
 # https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
 #
 # Binaries for programs and plugins
+/SocialFeed
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
+*.env
 
 # Test binary, built with `go test -c`
 *.test
