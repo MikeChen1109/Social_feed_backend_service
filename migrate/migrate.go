@@ -11,6 +11,7 @@ func init() {
 }
 
 func main() {
-	initializers.DB.Migrator().DropTable(&models.Comment{}, &models.Feed{}, &models.User{})
-	initializers.DB.AutoMigrate(&models.Feed{}, &models.Comment{}, &models.User{})
+	db := initializers.ConnectToDatabase()
+	// db.Migrator().DropTable(&models.Comment{}, &models.Feed{}, &models.User{})
+	db.AutoMigrate(&models.Feed{}, &models.Comment{}, &models.User{})
 }
