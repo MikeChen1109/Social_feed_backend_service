@@ -9,7 +9,7 @@ import (
 var authService *services.AuthService
 
 func InitAuthController() {
-	authService = &services.AuthService{
-		UserRepo: &repositories.UserRepository{DB: initializers.DB},
-	}
+	DB := initializers.DB
+	repo := repositories.UserRepository{DB: DB}
+	authService = &services.AuthService{UserRepo: &repo}
 }

@@ -6,11 +6,16 @@ import (
 	"gorm.io/gorm"
 )
 
-var ErrUserNotFound = errors.New("user not found")
+type UserRepositoryInterface interface {
+	FindByUsername(username string) (*models.User, error)
+	Create(user *models.User) error
+}
 
 type UserRepository struct {
 	DB *gorm.DB
 }
+
+var ErrUserNotFound = errors.New("user not found")
 
 func (r *UserRepository) FindByUsername(username string) (*models.User, error) {
 	var user models.User

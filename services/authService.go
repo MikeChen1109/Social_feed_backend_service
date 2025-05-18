@@ -13,7 +13,7 @@ import (
 )
 
 type AuthService struct {
-	UserRepo *repositories.UserRepository
+	UserRepo repositories.UserRepositoryInterface
 }
 
 type AppError struct {
