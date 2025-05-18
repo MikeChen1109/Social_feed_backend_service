@@ -57,7 +57,7 @@ func (s *FeedsController) GetFeeds(c *gin.Context) {
 		return
 	}
 
-	c.JSON(200, gin.H{
+	c.JSON(http.StatusOK, gin.H{
 		"feeds": feeds,
 	})
 }
@@ -66,7 +66,7 @@ func (s *FeedsController) GetFeedByID(c *gin.Context) {
 	id := c.Param("id")
 	feedID, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid feed ID",
 		})
 		return
@@ -74,13 +74,13 @@ func (s *FeedsController) GetFeedByID(c *gin.Context) {
 
 	feed, apperror := s.FeedsService.GetFeedByID(uint(feedID))
 	if apperror != nil {
-		c.JSON(404, gin.H{
+		c.JSON(http.StatusNotFound, gin.H{
 			"error": "Feed not found",
 		})
 		return
 	}
 
-	c.JSON(200, gin.H{
+	c.JSON(http.StatusOK, gin.H{
 		"feed": feed,
 	})
 }
@@ -96,7 +96,7 @@ func (s *FeedsController) UpdateFeed(c *gin.Context) {
 	id := c.Param("id")
 	feedID, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid feed ID",
 		})
 		return
@@ -104,13 +104,13 @@ func (s *FeedsController) UpdateFeed(c *gin.Context) {
 
 	apperror := s.FeedsService.UpdateFeed(uint(feedID), body.Title, body.Content)
 	if apperror != nil {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to update feed",
 		})
 		return
 	}
 
-	c.JSON(200, gin.H{
+	c.JSON(http.StatusOK, gin.H{
 		"message": "Updated feed successfully",
 	})
 }
@@ -119,7 +119,7 @@ func (s *FeedsController) DeleteFeed(c *gin.Context) {
 	id := c.Param("id")
 	feedID, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid feed ID",
 		})
 		return
@@ -127,13 +127,13 @@ func (s *FeedsController) DeleteFeed(c *gin.Context) {
 
 	apperror := s.FeedsService.DeleteFeed(uint(feedID))
 	if apperror != nil {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to delete feed",
 		})
 		return
 	}
 
-	c.JSON(200, gin.H{
+	c.JSON(http.StatusOK, gin.H{
 		"message": "Deleted feed successfully",
 	})
 }
