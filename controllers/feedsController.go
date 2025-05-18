@@ -35,9 +35,16 @@ func CreateFeed(c *gin.Context) {
 		return
 	}
 
+	userModel, ok := user.(models.User)
+	if !ok {
+		c.JSON(500, gin.H{
+			"error": "Internal server error: User type assertion failed",
+		})
+		return
+	}
 
-	feed := models.Feed{AuthorName: user.(models.User).Username,
-					    AuthorID: user.(models.User).ID,
+	feed := models.Feed{AuthorName: userModel.Username,
+					    AuthorID: userModel.ID,
 					    Title: body.Title,
 					    Content: body.Content}
 	result := initializers.DB.Create(&feed)
