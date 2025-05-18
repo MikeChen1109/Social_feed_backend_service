@@ -2,9 +2,9 @@ package services
 
 import (
 	"errors"
+	appErrors "myApp/SocialFeed/common/appErrors"
 	"myApp/SocialFeed/models"
 	"myApp/SocialFeed/repositories"
-	"net/http"
 	"os"
 	"time"
 
@@ -16,49 +16,40 @@ type AuthService struct {
 	UserRepo repositories.UserRepositoryInterface
 }
 
-type AppError struct {
-	StatusCode int
-	Message    string
-}
-
-func NewAppError(status int, msg string) *AppError {
-	return &AppError{StatusCode: status, Message: msg}
-}
-
-func (s *AuthService) Login(username, password string) (string, *AppError) {
+func (s *AuthService) Login(username, password string) (string, *appErrors.AppError) {
 	if username == "" || password == "" {
-		return "", NewAppError(http.StatusBadRequest, "Username and password are required")
+		return "", appErrors.ErrInvalidUsernameOrPassword
 	}
 
 	user, err := s.UserRepo.FindByUsername(username)
 	if err != nil {
-		if errors.Is(err, repositories.ErrUserNotFound) {
-			return "", NewAppError(http.StatusNotFound, "User not found")
+		if errors.Is(err, appErrors.ErrUserNotFound) {
+			return "", appErrors.ErrUserNotFound
 		}
-		return "", NewAppError(http.StatusInternalServerError, "Database error")
+		return "", appErrors.DatabaseError
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
-		return "", NewAppError(http.StatusUnauthorized, "Invalid password")
+		return "", appErrors.ErrInvalidPassword
 	}
 
 	token, err := generateJWT(user.ID)
 	if err != nil {
-		return "", NewAppError(http.StatusInternalServerError, "Token generation failed")
+		return "", appErrors.ErrTokenGenerationFailed
 	}
 
 	return token, nil
 }
 
-func (s *AuthService) Signup(username, password string) *AppError {
+func (s *AuthService) Signup(username, password string) *appErrors.AppError {
 	if username == "" || password == "" {
-		return NewAppError(http.StatusBadRequest, "Username and password are required")
+		return appErrors.ErrInvalidUsernameOrPassword
 	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 
 	if err != nil {
-		return NewAppError(http.StatusInternalServerError, "Failed to hash password")
+		return appErrors.ErrFailedToHashPassword
 	}
 
 	user := models.User{
@@ -67,20 +58,49 @@ func (s *AuthService) Signup(username, password string) *AppError {
 	}
 
 	existingUser, err := s.UserRepo.FindByUsername(username)
-	
-	if err != nil && !errors.Is(err, repositories.ErrUserNotFound) {
-		return NewAppError(http.StatusInternalServerError, "Database error")
+
+	if err != nil && !errors.Is(err, appErrors.ErrUserNotFound) {
+		return appErrors.DatabaseError
 	}
 
 	if existingUser != nil {
-		return NewAppError(http.StatusConflict, "Username already exists")
+		return appErrors.ErrUsernameAlreadyExists
 	}
 
 	if s.UserRepo.Create(&user) != nil {
-		return NewAppError(http.StatusInternalServerError, "Failed to create user")
+		return appErrors.ErrFailedToCreateUser
 	}
 
 	return nil
+}
+
+func (s *AuthService) VerifyToken(tokenStr string) (*models.User, error) {
+	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
+		return []byte(os.Getenv("SECRET")), nil
+	}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
+
+	if err != nil || !token.Valid {
+		return nil, errors.New("invalid token")
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok || claims["sub"] == nil {
+		return nil, errors.New("invalid claims")
+	}
+
+	if float64(time.Now().Unix()) > claims["exp"].(float64) {
+		return nil, errors.New("token expired")
+	}
+
+	user, err := s.UserRepo.FindByID(claims["sub"].(float64))
+	if err != nil {
+		if errors.Is(err, appErrors.ErrUserNotFound) {
+			return nil, appErrors.ErrUserNotFound
+		}
+		return nil, appErrors.DatabaseError
+	}
+
+	return user, nil
 }
 
 func generateJWT(userID uint) (string, error) {

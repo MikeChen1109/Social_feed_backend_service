@@ -6,10 +6,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterUserRoutes(c *gin.Engine) {
+func RegisterUserRoutes(c *gin.Engine, userController *controllers.UsersController) {
 	userGroup := c.Group("/user")
 	{
-		userGroup.POST("/signup", controllers.Signup)
-		userGroup.POST("/login", controllers.Login)
+		userGroup.POST("/signup", userController.Signup)
+		userGroup.POST("/login", userController.Login)
 	}
 }
