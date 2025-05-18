@@ -15,6 +15,9 @@ func init() {
 }
 
 func main() {
+	sqlDB, _ := initializers.DB.DB()
+	defer sqlDB.Close()
+	
 	router := gin.Default()
 
 	routes.RegisterFeedRoutes(router)
