@@ -1,74 +1,58 @@
 package controllers
 
 import (
-	"myApp/SocialFeed/initializers"
-	"myApp/SocialFeed/models"
+	"myApp/SocialFeed/common/helpers"
+	"myApp/SocialFeed/services"
+	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
 
-func CreateFeed(c *gin.Context) {
+type FeedsController struct {
+	FeedsService *services.FeedService
+}
+
+func (s *FeedsController) CreateFeed(c *gin.Context) {
 	var body struct {
-		Title string
+		Title   string
 		Content string
 	}
 
 	if err := c.Bind(&body); err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid request body",
 		})
 		return
 	}
 
-	if body.Title == "" || body.Content == "" {
-		c.JSON(400, gin.H{
-			"error": "Title and content are required",
-		})
-		return
-	}
-	
-	user, exists := c.Get("user")
-	if !exists {
-		c.JSON(401, gin.H{
-			"error": "Unauthorized: User not found",
+	userModel, err := helpers.GetCurrentUser(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "Unauthorized: " + err.Message,
 		})
 		return
 	}
 
-	userModel, ok := user.(models.User)
-	if !ok {
-		c.JSON(500, gin.H{
-			"error": "Internal server error: User type assertion failed",
-		})
-		return
-	}
-
-	feed := models.Feed{AuthorName: userModel.Username,
-					    AuthorID: userModel.ID,
-					    Title: body.Title,
-					    Content: body.Content}
-	result := initializers.DB.Create(&feed)
-
-	if result.Error != nil {
-		c.JSON(500, gin.H{
+	feed, apperror := s.FeedsService.CreateFeed(body.Title, body.Content, userModel)
+	if apperror != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to create feed",
 		})
 		return
 	}
 
-	c.JSON(200, gin.H{
+	c.JSON(http.StatusOK, gin.H{
 		"message": "Feed created successfully",
-		"feed": feed,
+		"feed":    feed,
 	})
 }
 
-func GetFeeds(c *gin.Context) {
-	var feeds []models.Feed
-	result := initializers.DB.Find(&feeds)
-
-	if result.Error != nil {
-		c.JSON(500, gin.H{
-			"error": "Failed to retrieve feeds",
+func (s *FeedsController) GetFeeds(c *gin.Context) {
+	feeds, err := s.FeedsService.GetFeeds()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to retrieve feeds: " + err.Message,
 		})
 		return
 	}
@@ -78,13 +62,18 @@ func GetFeeds(c *gin.Context) {
 	})
 }
 
-func GetFeedByID(c *gin.Context) {
-	var feed models.Feed
+func (s *FeedsController) GetFeedByID(c *gin.Context) {
 	id := c.Param("id")
+	feedID, err := strconv.ParseUint(id, 10, 64)
+	if err != nil {
+		c.JSON(400, gin.H{
+			"error": "Invalid feed ID",
+		})
+		return
+	}
 
-	result := initializers.DB.First(&feed, id)
-
-	if result.Error != nil {
+	feed, apperror := s.FeedsService.GetFeedByID(uint(feedID))
+	if apperror != nil {
 		c.JSON(404, gin.H{
 			"error": "Feed not found",
 		})
@@ -96,7 +85,7 @@ func GetFeedByID(c *gin.Context) {
 	})
 }
 
-func UpdateFeed(c *gin.Context) {
+func (s *FeedsController) UpdateFeed(c *gin.Context) {
 	var body struct {
 		Title   string
 		Content string
@@ -105,48 +94,46 @@ func UpdateFeed(c *gin.Context) {
 	c.Bind(&body)
 
 	id := c.Param("id")
-	var feed models.Feed
-
-	result := initializers.DB.First(&feed, id)
-
-	if result.Error != nil {
-		c.JSON(404, gin.H{
-			"error": "Feed not found",
+	feedID, err := strconv.ParseUint(id, 10, 64)
+	if err != nil {
+		c.JSON(400, gin.H{
+			"error": "Invalid feed ID",
 		})
 		return
 	}
 
-	if body.Title != "" {
-		feed.Title = body.Title
+	apperror := s.FeedsService.UpdateFeed(uint(feedID), body.Title, body.Content)
+	if apperror != nil {
+		c.JSON(500, gin.H{
+			"error": "Failed to update feed",
+		})
+		return
 	}
-	if body.Content != "" {
-		feed.Content = body.Content
-	}
-
-	initializers.DB.Save(&feed)
 
 	c.JSON(200, gin.H{
-		"message": "Feed updated successfully",
-		"feed": feed,
+		"message": "Updated feed successfully",
 	})
 }
 
-func DeleteFeed(c *gin.Context) {
+func (s *FeedsController) DeleteFeed(c *gin.Context) {
 	id := c.Param("id")
-	var feed models.Feed
-
-	result := initializers.DB.First(&feed, id)
-
-	if result.Error != nil {
-		c.JSON(404, gin.H{
-			"error": "Feed not found",
+	feedID, err := strconv.ParseUint(id, 10, 64)
+	if err != nil {
+		c.JSON(400, gin.H{
+			"error": "Invalid feed ID",
 		})
 		return
 	}
 
-	initializers.DB.Delete(&feed)
+	apperror := s.FeedsService.DeleteFeed(uint(feedID))
+	if apperror != nil {
+		c.JSON(500, gin.H{
+			"error": "Failed to delete feed",
+		})
+		return
+	}
 
 	c.JSON(200, gin.H{
-		"message": "Feed deleted successfully",
+		"message": "Deleted feed successfully",
 	})
 }

@@ -7,13 +7,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterFeedRoutes(c *gin.Engine) {
+func RegisterFeedRoutes(c *gin.Engine, authMiddleware *middleware.AuthMiddleware, feedsController *controllers.FeedsController) {
 	feedGroup := c.Group("/feed")
 	{
-		feedGroup.POST("/create", middleware.RequireAuth, controllers.CreateFeed)
-		feedGroup.GET("/", controllers.GetFeeds)
-		feedGroup.GET("/:id", controllers.GetFeedByID)
-		feedGroup.PUT("/:id", middleware.RequireAuth, controllers.UpdateFeed)
-		feedGroup.DELETE("/:id", middleware.RequireAuth, controllers.DeleteFeed)
+		feedGroup.POST("/create", authMiddleware.RequireAuth, feedsController.CreateFeed)
+		feedGroup.GET("/", feedsController.GetFeeds)
+		feedGroup.GET("/:id", feedsController.GetFeedByID)
+		feedGroup.PUT("/:id", authMiddleware.RequireAuth, feedsController.UpdateFeed)
+		feedGroup.DELETE("/:id", authMiddleware.RequireAuth, feedsController.DeleteFeed)
 	}
 }
