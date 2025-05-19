@@ -9,6 +9,7 @@ import (
 type FeedRepositoryInterface interface {
 	CreateFeed(feed *models.Feed) error
 	GetFeeds() ([]models.Feed, error)
+	PaginatedFeeds(offset int, limit int) (*models.PaginatedFeedsResponse, error)
 	GetFeedByID(id uint) (*models.Feed, error)
 	UpdateFeed(feed *models.Feed) error
 	DeleteFeed(id uint) error
@@ -31,6 +32,24 @@ func (r *FeedRepository) GetFeeds() ([]models.Feed, error) {
 		return nil, err
 	}
 	return feeds, nil
+}
+
+func (r *FeedRepository) PaginatedFeeds(offset int, limit int) (*models.PaginatedFeedsResponse, error) {
+	var feeds []models.Feed
+	err := r.DB.Offset(offset).Limit(limit + 1).Order("created_at DESC").Find(&feeds).Error
+	if err != nil {
+		return nil, err
+	}
+
+	hasMore := false
+	if len(feeds) > limit {
+		hasMore = true
+		feeds = feeds[:limit] // 只取回前 limit 筆
+	}
+
+	var meta = models.Meta{HasMore: hasMore, Page: offset + 1, Limit: limit}
+	var response = models.PaginatedFeedsResponse{Data: feeds, Meta: meta}
+	return &response, nil
 }
 
 func (r *FeedRepository) GetFeedByID(id uint) (*models.Feed, error) {

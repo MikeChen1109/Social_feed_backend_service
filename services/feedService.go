@@ -39,6 +39,16 @@ func (s *FeedService) GetFeeds() ([]models.Feed, *appErrors.AppError) {
 	return feeds, nil
 }
 
+func (s *FeedService) PaginatedFeeds(offset int, limit int) (*models.PaginatedFeedsResponse, *appErrors.AppError) {
+	response, err := s.FeedRepo.PaginatedFeeds(offset, limit)
+
+	if err != nil {
+		return nil, appErrors.DatabaseError
+	}
+
+	return response, nil
+}
+
 func (s *FeedService) GetFeedByID(id uint) (*models.Feed, *appErrors.AppError) {
 	feed, err := s.FeedRepo.GetFeedByID(id)
 	if err != nil {

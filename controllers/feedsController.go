@@ -62,6 +62,35 @@ func (s *FeedsController) GetFeeds(c *gin.Context) {
 	})
 }
 
+func (s *FeedsController) PaginatedFeeds(c *gin.Context) {
+	pageStr := c.DefaultQuery("page", "1")
+	limitStr := c.DefaultQuery("limit", "10")
+
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page < 1 {
+		page = 1
+	}
+
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit < 1 || limit > 100 {
+		limit = 10
+	}
+
+	offset := (page - 1) * limit
+	response, apperror := s.FeedsService.PaginatedFeeds(offset, limit)
+
+	if apperror != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to retrieve feeds: " + apperror.Message,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"response": response,
+	})
+}
+
 func (s *FeedsController) GetFeedByID(c *gin.Context) {
 	id := c.Param("id")
 	feedID, err := strconv.ParseUint(id, 10, 64)

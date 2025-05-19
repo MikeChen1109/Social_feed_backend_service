@@ -7,7 +7,7 @@ import (
 	"myApp/SocialFeed/repositories"
 	"myApp/SocialFeed/routes"
 	"myApp/SocialFeed/services"
-	"time"
+	"strings"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -36,12 +36,15 @@ func main() {
 	// Initialize Gin router and register routes
 	router := gin.Default()
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000", "https://feedapi.onrender.com"},
-		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Authorization", "Content-Type"},
+		AllowOriginFunc: func(origin string) bool {
+			// 允許任意 localhost 開頭的來源（含動態 port）
+			return strings.HasPrefix(origin, "http://localhost")
+		},
+		AllowOrigins:     []string{"https://feedapi.onrender.com"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE"},
+		AllowHeaders:     []string{"Origin", "Authorization", "Content-Type", "X-Requested-With", "Accept"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
-		MaxAge:           12 * time.Hour,
 	}))
 
 	routes.RegisterFeedRoutes(router, authMiddleware, feedsController)
