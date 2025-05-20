@@ -11,7 +11,7 @@ import (
 type UserRepositoryInterface interface {
 	FindByUsername(username string) (*models.User, error)
 	Create(user *models.User) error
-	FindByID(id float64) (*models.User, error)
+	FindByID(id uint) (*models.User, error)
 }
 
 type UserRepository struct {
@@ -36,7 +36,7 @@ func (r *UserRepository) Create(user *models.User) error {
 	return nil
 }
 
-func (r *UserRepository) FindByID(id float64) (*models.User, error) {
+func (r *UserRepository) FindByID(id uint) (*models.User, error) {
 	var user models.User
 	if err := r.DB.First(&user, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

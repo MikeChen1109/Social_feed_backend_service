@@ -11,5 +11,7 @@ func RegisterUserRoutes(c *gin.Engine, userController *controllers.UsersControll
 	{
 		userGroup.POST("/signup", userController.Signup)
 		userGroup.POST("/login", userController.Login)
+		userGroup.POST("/logout", userController.Logout)
+		userGroup.POST("/refresh", userController.Refresh)
 	}
 }

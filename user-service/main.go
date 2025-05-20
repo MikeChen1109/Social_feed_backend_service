@@ -14,18 +14,19 @@ import (
 
 func init() {
 	initializers.LoadEnvVariables()
-	initializers.ConnectToDatabase()
 }
 
 func main() {
 	// database connection
+	redisClient := initializers.ConnectRedis()
 	db := initializers.ConnectToDatabase()
 	sqlDB, _ := db.DB()
 	defer sqlDB.Close()
 
 	// Initialize repositories, services, controllers, and middleware
 	userRepo := &repositories.UserRepository{DB: db}
-	authService := &services.AuthService{UserRepo: userRepo}
+	tokenRepo := &repositories.TokenRepository{DB: db, Redis: redisClient}
+	authService := &services.AuthService{UserRepo: userRepo, TokenRepo: tokenRepo}
 	userController := &controllers.UsersController{AuthService: authService}
 
 	// Initialize Gin router and register routes

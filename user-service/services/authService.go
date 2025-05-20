@@ -2,43 +2,52 @@ package services
 
 import (
 	"errors"
+	"os"
+	"time"
 	appErrors "user-service/common/appErrors"
 	"user-service/models"
 	"user-service/repositories"
-	"os"
-	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type AuthService struct {
-	UserRepo repositories.UserRepositoryInterface
+	UserRepo  repositories.UserRepositoryInterface
+	TokenRepo repositories.TokenRepositoryInterface
 }
 
-func (s *AuthService) Login(username, password string) (string, *appErrors.AppError) {
+func (s *AuthService) Login(username, password string) (string, string, *appErrors.AppError) {
 	if username == "" || password == "" {
-		return "", appErrors.ErrInvalidUsernameOrPassword
+		return "", "", appErrors.ErrInvalidUsernameOrPassword
 	}
 
 	user, err := s.UserRepo.FindByUsername(username)
 	if err != nil {
 		if errors.Is(err, appErrors.ErrUserNotFound) {
-			return "", appErrors.ErrUserNotFound
+			return "", "", appErrors.ErrUserNotFound
 		}
-		return "", appErrors.DatabaseError
+		return "", "", appErrors.DatabaseError
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
-		return "", appErrors.ErrInvalidPassword
+		return "", "", appErrors.ErrInvalidPassword
 	}
 
 	token, err := generateJWT(user)
+
 	if err != nil {
-		return "", appErrors.ErrTokenGenerationFailed
+		return "", "", appErrors.ErrTokenGenerationFailed
 	}
 
-	return token, nil
+	refreshToken := uuid.NewString()
+	storeErr := s.TokenRepo.StoreRefreshToken(refreshToken, user.ID)
+	if storeErr != nil {
+		return "", "", appErrors.ErrRefreshTokenStoreFailed
+	}
+
+	return token, refreshToken, nil
 }
 
 func (s *AuthService) Signup(username, password string) *appErrors.AppError {
@@ -74,33 +83,38 @@ func (s *AuthService) Signup(username, password string) *appErrors.AppError {
 	return nil
 }
 
-func (s *AuthService) VerifyToken(tokenStr string) (*models.User, error) {
-	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
-		return []byte(os.Getenv("SECRET")), nil
-	}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
-
-	if err != nil || !token.Valid {
-		return nil, errors.New("invalid token")
+func (s *AuthService) Refresh(refreshToken string) (string, string, *appErrors.AppError) {
+	userId, err := s.TokenRepo.GetUserIDByRefreshToken(refreshToken)
+	if err != nil {
+		return "", "", appErrors.ErrRefreshTokenExpiredOrNotExists
 	}
 
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok || claims["sub"] == nil {
-		return nil, errors.New("invalid claims")
-	}
+	s.TokenRepo.DeleteRefreshToken(refreshToken)
 
-	if float64(time.Now().Unix()) > claims["exp"].(float64) {
-		return nil, errors.New("token expired")
-	}
-
-	user, err := s.UserRepo.FindByID(claims["sub"].(float64))
+	user, err := s.UserRepo.FindByID(userId)
 	if err != nil {
 		if errors.Is(err, appErrors.ErrUserNotFound) {
-			return nil, appErrors.ErrUserNotFound
+			return "", "", appErrors.ErrUserNotFound
 		}
-		return nil, appErrors.DatabaseError
+		return "", "", appErrors.DatabaseError
 	}
 
-	return user, nil
+	token, err := generateJWT(user)
+	if err != nil {
+		return "", "", appErrors.ErrTokenGenerationFailed
+	}
+
+	newRefreshToken := uuid.NewString()
+	storeErr := s.TokenRepo.StoreRefreshToken(newRefreshToken, user.ID)
+	if storeErr != nil {
+		return "", "", appErrors.ErrRefreshTokenStoreFailed
+	}
+
+	return token, newRefreshToken, nil
+}
+
+func (s *AuthService) Logout(refreshToken string) error {
+	return s.TokenRepo.DeleteRefreshToken(refreshToken)
 }
 
 func generateJWT(user *models.User) (string, error) {
