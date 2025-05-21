@@ -1,6 +1,6 @@
 # Social Feed Backend Service
 
-![Go Test](https://github.com/MikeChen1109/Social_feed_backend_service/actions/workflows/test.yml/badge.svg)
+[![Go CI](https://github.com/MikeChen1109/Social_feed_backend_service/actions/workflows/ci.yml/badge.svg)](https://github.com/MikeChen1109/Social_feed_backend_service/actions/workflows/ci.yml)
 
 
 A simple backend service built with **Golang**, **Gin**, and **GORM**, designed to support basic social feed features including authentication, posting, and feed management. This project is suitable for learning, showcasing fullstack backend deployment, or as a starter template.
