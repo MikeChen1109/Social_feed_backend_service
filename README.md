@@ -113,6 +113,7 @@ API will be available at: `http://localhost:3000`
 
 ## Roadmap
 
+* [ ] Comment feature (create, list, delete)
 * [ ] Swagger/OpenAPI documentation
 * [ ] Dockerfile for containerized deployment
 * [ ] Rate limiting
