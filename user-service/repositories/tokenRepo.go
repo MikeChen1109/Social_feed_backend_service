@@ -10,7 +10,7 @@ import (
 )
 
 type TokenRepositoryInterface interface {
-	StoreRefreshToken(token string, userID uint) error
+	StoreRefreshToken(token string, userID uint, expiration time.Duration) error
 	GetUserIDByRefreshToken(token string) (uint, error)
 	DeleteRefreshToken(token string) error
 }
@@ -20,9 +20,8 @@ type TokenRepository struct {
 	Redis *redis.Client
 }
 
-func (r *TokenRepository) StoreRefreshToken(token string, userID uint) error {
+func (r *TokenRepository) StoreRefreshToken(token string, userID uint, expiration time.Duration) error {
 	ctx := context.Background()
-	expiration := time.Hour * 24 * 30
 	err := r.Redis.Set(ctx, "refresh:"+token, userID, expiration).Err()
 	if err != nil {
 		return err

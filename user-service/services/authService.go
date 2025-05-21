@@ -42,7 +42,8 @@ func (s *AuthService) Login(username, password string) (string, string, *appErro
 	}
 
 	refreshToken := uuid.NewString()
-	storeErr := s.TokenRepo.StoreRefreshToken(refreshToken, user.ID)
+	expiration := time.Hour * 24 * 30
+	storeErr := s.TokenRepo.StoreRefreshToken(refreshToken, user.ID, expiration)
 	if storeErr != nil {
 		return "", "", appErrors.ErrRefreshTokenStoreFailed
 	}
@@ -105,7 +106,8 @@ func (s *AuthService) Refresh(refreshToken string) (string, string, *appErrors.A
 	}
 
 	newRefreshToken := uuid.NewString()
-	storeErr := s.TokenRepo.StoreRefreshToken(newRefreshToken, user.ID)
+	expiration := time.Hour * 24 * 30
+	storeErr := s.TokenRepo.StoreRefreshToken(newRefreshToken, user.ID, expiration)
 	if storeErr != nil {
 		return "", "", appErrors.ErrRefreshTokenStoreFailed
 	}
