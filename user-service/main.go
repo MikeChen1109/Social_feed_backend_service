@@ -22,6 +22,7 @@ func main() {
 	db := initializers.ConnectToDatabase()
 	sqlDB, _ := db.DB()
 	defer sqlDB.Close()
+	defer redisClient.Close()
 
 	// Initialize repositories, services, controllers, and middleware
 	userRepo := &repositories.UserRepository{DB: db}
