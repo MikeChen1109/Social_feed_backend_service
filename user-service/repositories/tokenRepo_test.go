@@ -46,7 +46,7 @@ func setupTestRedis(t *testing.T) (*redis.Client, func()) {
 	return rdb, cleanup
 }
 
-func setupRepo(t *testing.T) (*TokenRepository, func(), func()) {
+func setupTokenRepoForTest(t *testing.T) (*TokenRepository, func(), func()) {
 	db, dbCleanUp := setupTestDB()
 	redis, redisCleanUp := setupTestRedis(t)
 	repo := &TokenRepository{DB: db, Redis: redis}
@@ -56,7 +56,7 @@ func setupRepo(t *testing.T) (*TokenRepository, func(), func()) {
 
 func TestStoreRefreshToken(t *testing.T) {
 	assert := assert.New(t)
-	repo, dbCleanUp, redisCleanUp  := setupRepo(t)
+	repo, dbCleanUp, redisCleanUp  := setupTokenRepoForTest(t)
 	expectedToken := uuid.NewString()
 	expectedUserId := uint(100)
 	defer dbCleanUp()
@@ -73,7 +73,7 @@ func TestStoreRefreshToken(t *testing.T) {
 
 func TestGetUserIDByRefreshTokenWhenTokenNotExists(t *testing.T) {
 	assert := assert.New(t)
-	repo, dbCleanUp, redisCleanUp  := setupRepo(t)
+	repo, dbCleanUp, redisCleanUp  := setupTokenRepoForTest(t)
 	token := uuid.NewString()
 	userId := uint(100)
 	defer dbCleanUp()
@@ -92,7 +92,7 @@ func TestGetUserIDByRefreshTokenWhenTokenNotExists(t *testing.T) {
 
 func TestDeleteRefreshToken(t *testing.T) {
 	assert := assert.New(t)
-	repo, dbCleanUp, redisCleanUp  := setupRepo(t)
+	repo, dbCleanUp, redisCleanUp  := setupTokenRepoForTest(t)
 	token := uuid.NewString()
 	userId := uint(100)
 	defer dbCleanUp()
