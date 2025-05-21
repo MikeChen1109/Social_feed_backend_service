@@ -8,12 +8,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+/* ---------- helper ---------- */
+
 func setupUserRepoForTest() (*UserRepository, func()) {
 	db, dbCleanUp := setupTestDB()
 	repo := &UserRepository{DB: db}
 
 	return repo, dbCleanUp
 }
+
+/* ---------- Tests ---------- */
 
 func TestCreateUserSuccess(t *testing.T) {
 	assert := assert.New(t)

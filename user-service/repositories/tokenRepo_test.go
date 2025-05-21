@@ -13,6 +13,8 @@ import (
 	"gorm.io/gorm"
 )
 
+/* ---------- helper ---------- */
+
 func setupTestDB() (*gorm.DB, func()) {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	if err != nil {
@@ -53,6 +55,8 @@ func setupTokenRepoForTest(t *testing.T) (*TokenRepository, func(), func()) {
 
 	return repo, dbCleanUp, redisCleanUp
 }
+
+/* ---------- Tests ---------- */
 
 func TestStoreRefreshTokenSuccess(t *testing.T) {
 	assert := assert.New(t)
