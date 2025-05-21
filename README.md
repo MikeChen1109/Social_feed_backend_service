@@ -78,20 +78,23 @@ API will be available at: `http://localhost:3000`
 
 ### Auth
 
-| Method | Endpoint | Description      |
-| ------ | -------- | ---------------- |
-| POST   | /signup  | Register a user  |
-| POST   | /login   | User login + JWT |
+| Method | Endpoint      | Description                     |
+| ------ | ------------- | ------------------------------- |
+| POST   | /user/signup  | Register a user                 |
+| POST   | /user/login   | User login + access token       |
+| POST   | /user/logout  | Logout and revoke refresh token |
+| POST   | /user/refresh | Issue new tokens via refresh    |
 
 ### Feed
 
 | Method | Endpoint     | Description          |
-| ------ | ------------ | -------------------- |
-| POST   | /feed/create | Create a new feed    |
-| GET    | /feed/       | Get paginated feeds  |
-| GET    | /feed/\:id   | Get a feed by ID     |
-| PUT    | /feed/\:id   | Update a feed (auth) |
-| DELETE | /feed/\:id   | Delete a feed (auth) |
+| ------ | ----------------- | ------------------------------------------------- |
+| POST   | /feed/create      | Create a new feed                                 |
+| GET    | /feed/            | Get all feeds                                     |
+| GET    | /feed/paginated   | Get paginated feeds (with page and limit query)   |
+| GET    | /feed/\:id        | Get a feed by ID                                  |
+| PUT    | /feed/\:id        | Update a feed (auth)                              |
+| DELETE | /feed/\:id        | Delete a feed (auth)                              |
 
 ---
 
