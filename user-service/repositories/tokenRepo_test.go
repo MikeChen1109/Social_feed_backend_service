@@ -54,7 +54,7 @@ func setupTokenRepoForTest(t *testing.T) (*TokenRepository, func(), func()) {
 	return repo, dbCleanUp, redisCleanUp
 }
 
-func TestStoreRefreshToken(t *testing.T) {
+func TestStoreRefreshTokenSuccess(t *testing.T) {
 	assert := assert.New(t)
 	repo, dbCleanUp, redisCleanUp  := setupTokenRepoForTest(t)
 	expectedToken := uuid.NewString()
@@ -90,7 +90,7 @@ func TestGetUserIDByRefreshTokenWhenTokenNotExists(t *testing.T) {
 	assert.Equal(id, uint(0))
 }
 
-func TestDeleteRefreshToken(t *testing.T) {
+func TestDeleteRefreshTokenSuccess(t *testing.T) {
 	assert := assert.New(t)
 	repo, dbCleanUp, redisCleanUp  := setupTokenRepoForTest(t)
 	token := uuid.NewString()
