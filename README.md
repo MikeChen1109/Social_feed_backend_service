@@ -9,8 +9,9 @@ A simple backend service built with **Golang**, **Gin**, and **GORM**, designed 
 
 ## Features
 
-* JWT-based user authentication (signup/login)
+* JWT-based user authentication (signup/login/logout/refresh)
 * Feed CRUD operations
+* Refresh token storage in Redis (Upstash)
 * Pagination support
 * Middleware-based route protection
 * Clean folder structure with MVC pattern
@@ -21,9 +22,10 @@ A simple backend service built with **Golang**, **Gin**, and **GORM**, designed 
 
 * **Backend**: Go, Gin, GORM, Testify
 * **Database**: PostgreSQL (via Supabase), sqlite (for tests), miniredis(for tests)
-* **Auth**: JWT
+* **Auth**: JWT + Refresh Token  
 * **Cache**: Redis (via Upstash)
 * **Deployment**: Render
+* **CI**: GitHub Actions
 
 ---
 
