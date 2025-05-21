@@ -76,7 +76,7 @@ func (s *FeedsController) PaginatedFeeds(c *gin.Context) {
 		limit = 10
 	}
 
-	offset := (page - 1) * limit
+	offset := (page - 1)
 	response, apperror := s.FeedsService.PaginatedFeeds(offset, limit)
 
 	if apperror != nil {
