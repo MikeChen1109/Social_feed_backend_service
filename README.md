@@ -53,6 +53,7 @@ cd Social_feed_backend_service
 Create a `.env` file and fill in:
 
 ```env
+PORT=your_custom_port
 DB_URL=your_postgres_url
 JWT_SECRET=your_jwt_secret
 REDIS_URL=your_upstash_redis_url
@@ -70,7 +71,7 @@ go mod tidy
 go run main.go
 ```
 
-API will be available at: `http://localhost:3000`
+API will be available at: `http://localhost:YOUR_PORT_FROM_ENVIRMENT`
 
 ---
 
