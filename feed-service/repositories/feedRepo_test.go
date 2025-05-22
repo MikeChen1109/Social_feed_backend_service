@@ -17,7 +17,7 @@ func setupTestDB() (*gorm.DB, func()) {
 		panic("failed to connect test db")
 	}
 
-	db.AutoMigrate(&models.Feed{})
+	db.AutoMigrate(&models.Feed{}, &models.Comment{})
 
 	cleanup := func() {
 		sqlDB, err := db.DB()
