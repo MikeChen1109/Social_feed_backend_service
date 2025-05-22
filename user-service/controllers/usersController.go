@@ -74,10 +74,9 @@ func (usersController *UsersController) Logout(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
 	}
 
-	err := usersController.AuthService.Logout(body.RefreshToken)
-	if err != nil {
-		errorHandler(c, err)
-	}
+	usersController.AuthService.Logout(body.RefreshToken)
+
+	c.JSON(http.StatusOK, gin.H{"message": "Logout successfully"})
 }
 
 func errorHandler(c *gin.Context, err error) {
