@@ -65,10 +65,16 @@ REDIS_URL=your_upstash_redis_url
 go mod tidy
 ```
 
-### 4. Run the Server
+### 4. Test the Server
 
 ```bash
-go run main.go
+make test 
+```
+
+### 5. Run the Server
+
+```bash
+make run 
 ```
 
 API will be available at: `http://localhost:YOUR_PORT_FROM_ENVIRMENT`
