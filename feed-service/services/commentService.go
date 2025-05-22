@@ -11,6 +11,10 @@ type CommentService struct {
 }
 
 func (s *CommentService) CreateComment(feedId uint, content string, userId uint, userName string) (*models.Comment, *appErrors.AppError) {
+	if content == "" || feedId == uint(0) {
+		return nil, appErrors.ErrCommentIvalidContentOrFeedId
+	}
+
 	comment := &models.Comment{FeedID: feedId, Content: content, AuthorName: userName, AuthorID: userId}
 
 	err := s.CommentRepo.CreateComment(comment)

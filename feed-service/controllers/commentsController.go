@@ -51,7 +51,7 @@ func (s *CommentsController) CreateComment(c *gin.Context) {
 func (s *CommentsController) PaginatedComments(c *gin.Context) {
 	pageStr := c.DefaultQuery("page", "1")
 	limitStr := c.DefaultQuery("limit", "10")
-	feedIdStr := c.Query("id")
+	feedIdStr := c.DefaultQuery("id", "0")
 
 	feedID, err := strconv.Atoi(feedIdStr)
 	if err != nil {
