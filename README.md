@@ -123,7 +123,8 @@ API will be available at: `http://localhost:YOUR_PORT_FROM_ENVIRMENT`
 
 ## Roadmap
 
-* [ ] Comment feature (create, list, delete)
+* [x] Comment feature (create, list, delete)
+* [ ] Forget password feature
 * [ ] Swagger/OpenAPI documentation
 * [ ] Dockerfile for containerized deployment
 * [ ] Rate limiting
