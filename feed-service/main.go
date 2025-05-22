@@ -24,8 +24,11 @@ func main() {
 
 	// Initialize repositories, services, controllers, and middleware
 	feedsRepo := &repositories.FeedRepository{DB: db}
+	commentsRepo := &repositories.CommentRepository{DB: db}
 	feedService := &services.FeedService{FeedRepo: feedsRepo}
+	commentService := &services.CommentService{CommentRepo: commentsRepo}
 	feedsController := &controllers.FeedsController{FeedsService: feedService}
+	commentsController := &controllers.CommentsController{CommentsService: commentService}
 
 	// Initialize Gin router and register routes
 	router := gin.Default()
@@ -42,5 +45,6 @@ func main() {
 	}))
 
 	routes.RegisterFeedRoutes(router, feedsController)
+	routes.RegisterCommentRoutes(router, commentsController)
 	router.Run()
 }
