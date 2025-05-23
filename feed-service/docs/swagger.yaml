@@ -1,0 +1,178 @@
+definitions:
+  models.CreateFeedRequest:
+    properties:
+      content:
+        type: string
+      title:
+        type: string
+    type: object
+  models.FeedResponse:
+    properties:
+      authorID:
+        type: integer
+      authorName:
+        type: string
+      commentsCount:
+        type: integer
+      content:
+        type: string
+      createdAt:
+        type: string
+      id:
+        type: integer
+      title:
+        type: string
+      updatedAt:
+        type: string
+      upvotes:
+        type: integer
+    type: object
+  models.UpdateFeedRequest:
+    properties:
+      content:
+        type: string
+      title:
+        type: string
+    type: object
+info:
+  contact: {}
+paths:
+  /feed:
+    post:
+      consumes:
+      - application/json
+      description: Authenticated user creates a new feed
+      parameters:
+      - description: Feed content
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateFeedRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.FeedResponse'
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      summary: Create a new feed
+      tags:
+      - Feeds
+  /feed/{id}:
+    delete:
+      description: Delete a feed by ID
+      parameters:
+      - description: Feed ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+        "500":
+          description: Internal Server Error
+      summary: Delete a feed
+      tags:
+      - Feeds
+    get:
+      description: Retrieve a single feed by its ID
+      parameters:
+      - description: Feed ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.FeedResponse'
+        "400":
+          description: Bad Request
+        "404":
+          description: Not Found
+      summary: Get feed by ID
+      tags:
+      - Feeds
+    put:
+      consumes:
+      - application/json
+      description: Update feed content by ID
+      parameters:
+      - description: Feed ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Updated content
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateFeedRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+        "500":
+          description: Internal Server Error
+      summary: Update a feed
+      tags:
+      - Feeds
+  /feed/all:
+    get:
+      description: Retrieve all feeds without pagination
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.FeedResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+      summary: Get all feeds
+      tags:
+      - Feeds
+  /feed/paginated:
+    get:
+      description: Retrieve feeds with pagination parameters
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "500":
+          description: Internal Server Error
+      summary: Get paginated feeds
+      tags:
+      - Feeds
+swagger: "2.0"

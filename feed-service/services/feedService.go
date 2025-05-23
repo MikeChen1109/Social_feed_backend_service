@@ -10,7 +10,7 @@ type FeedService struct {
 	FeedRepo repositories.FeedRepositoryInterface
 }
 
-func (s *FeedService) CreateFeed(title string, content string, userId uint, userName string) (*models.Feed, *appErrors.AppError) {
+func (s *FeedService) CreateFeed(title string, content string, userId uint, userName string) (*models.FeedResponse, *appErrors.AppError) {
 	if title == "" || content == "" {
 		return nil, appErrors.ErrFeedInvalidContentOrTitle
 	}
@@ -25,18 +25,23 @@ func (s *FeedService) CreateFeed(title string, content string, userId uint, user
 		return nil, appErrors.DatabaseError
 	}
 
-	return &feed, nil
+	return feed.ToFeedResponse(), nil
 }
 
-func (s *FeedService) GetFeeds() ([]models.Feed, *appErrors.AppError) {
+func (s *FeedService) GetFeeds() ([]models.FeedResponse, *appErrors.AppError) {
 	var feeds []models.Feed
 	feeds, err := s.FeedRepo.GetFeeds()
+
+	responses := make([]models.FeedResponse, len(feeds))
+	for i, f := range feeds {
+		responses[i] = *f.ToFeedResponse()
+	}
 
 	if err != nil {
 		return nil, appErrors.DatabaseError
 	}
 
-	return feeds, nil
+	return responses, nil
 }
 
 func (s *FeedService) PaginatedFeeds(offset int, limit int) (*models.PaginatedFeedsResponse, *appErrors.AppError) {
@@ -49,13 +54,13 @@ func (s *FeedService) PaginatedFeeds(offset int, limit int) (*models.PaginatedFe
 	return response, nil
 }
 
-func (s *FeedService) GetFeedByID(id uint) (*models.Feed, *appErrors.AppError) {
+func (s *FeedService) GetFeedByID(id uint) (*models.FeedResponse, *appErrors.AppError) {
 	feed, err := s.FeedRepo.GetFeedByID(id)
 	if err != nil {
 		return nil, appErrors.DatabaseError
 	}
 
-	return feed, nil
+	return feed.ToFeedResponse(), nil
 }
 
 func (s *FeedService) UpdateFeed(id uint, title string, content string) *appErrors.AppError {

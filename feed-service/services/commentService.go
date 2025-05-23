@@ -10,7 +10,7 @@ type CommentService struct {
 	CommentRepo repositories.CommentRepositoryInterface
 }
 
-func (s *CommentService) CreateComment(feedId uint, content string, userId uint, userName string) (*models.Comment, *appErrors.AppError) {
+func (s *CommentService) CreateComment(feedId uint, content string, userId uint, userName string) (*models.CommentResponse, *appErrors.AppError) {
 	if content == "" || feedId == uint(0) {
 		return nil, appErrors.ErrCommentIvalidContentOrFeedId
 	}
@@ -22,7 +22,7 @@ func (s *CommentService) CreateComment(feedId uint, content string, userId uint,
 		return nil, appErrors.DatabaseError
 	}
 
-	return comment, nil
+	return comment.ToCommentResponse(), nil
 }
 
 func (s *CommentService) PaginatedComments(offset int, limit int, feedId uint) (*models.PaginatedCommentsResponse, *appErrors.AppError) {

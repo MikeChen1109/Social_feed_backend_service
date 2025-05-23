@@ -13,6 +13,18 @@ type CommentsController struct {
 	CommentsService *services.CommentService
 }
 
+// CreateComment godoc
+// @Summary      Create a new comment
+// @Description  Authenticated user creates a comment on a feed
+// @Tags         Comments
+// @Accept       json
+// @Produce      json
+// @Param        body  body  struct{FeedID uint; Content string}  true  "Comment content"
+// @Success      200   {object}  models.CommentResponse
+// @Failure      400   
+// @Failure      401   
+// @Failure      500   
+// @Router       /comment [post]
 func (s *CommentsController) CreateComment(c *gin.Context) {
 	var body struct {
 		FeedID  uint
@@ -34,7 +46,7 @@ func (s *CommentsController) CreateComment(c *gin.Context) {
 		return
 	}
 
-	comment, apperror := s.CommentsService.CreateComment(body.FeedID, body.Content, claimsModel.UserID, claimsModel.Username)
+	response, apperror := s.CommentsService.CreateComment(body.FeedID, body.Content, claimsModel.UserID, claimsModel.Username)
 	if apperror != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to create comment",
@@ -42,12 +54,21 @@ func (s *CommentsController) CreateComment(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Comment created successfully",
-		"comment": comment,
-	})
+	c.JSON(http.StatusOK, response)
 }
 
+// PaginatedComments godoc
+// @Summary      Get paginated comments for a feed
+// @Description  Retrieve comments for a specific feed with pagination
+// @Tags         Comments
+// @Produce      json
+// @Param        id     query     int  true   "Feed ID"
+// @Param        page   query     int  false  "Page number"
+// @Param        limit  query     int  false  "Items per page"
+// @Success      200    
+// @Failure      400    
+// @Failure      500    
+// @Router       /comment/paginated [get]
 func (s *CommentsController) PaginatedComments(c *gin.Context) {
 	pageStr := c.DefaultQuery("page", "1")
 	limitStr := c.DefaultQuery("limit", "10")
@@ -78,7 +99,5 @@ func (s *CommentsController) PaginatedComments(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"response": response,
-	})
+	c.JSON(http.StatusOK, response)
 }

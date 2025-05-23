@@ -5,12 +5,15 @@ import (
 	"feed-service/middleware"
 
 	"github.com/gin-gonic/gin"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	"github.com/swaggo/files"
 )
 
 func RegisterCommentRoutes(c *gin.Engine, commentsController *controllers.CommentsController) {
-	feedGroup := c.Group("/comment")
+	commentGroup := c.Group("/comment")
+	commentGroup.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	{
-		feedGroup.POST("/create", middleware.RequireAuth, commentsController.CreateComment)
-		feedGroup.GET("/paginated", commentsController.PaginatedComments)
+		commentGroup.POST("/create", middleware.RequireAuth, commentsController.CreateComment)
+		commentGroup.GET("/paginated", commentsController.PaginatedComments)
 	}
 }

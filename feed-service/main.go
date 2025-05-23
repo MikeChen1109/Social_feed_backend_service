@@ -10,6 +10,7 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
+	_ "feed-service/docs"
 )
 
 func init() {
