@@ -1,0 +1,140 @@
+definitions:
+  models.LoginRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+  models.LogoutRequest:
+    properties:
+      refreshToken:
+        type: string
+    type: object
+  models.RefreshRequest:
+    properties:
+      refreshToken:
+        type: string
+    type: object
+  models.SignupRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+  models.TokenResponse:
+    properties:
+      refreshToken:
+        type: string
+      token:
+        type: string
+    type: object
+info:
+  contact: {}
+paths:
+  /user/login:
+    post:
+      consumes:
+      - application/json
+      description: Login with username and password, returns access and refresh tokens
+      parameters:
+      - description: Login info
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.TokenResponse'
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      summary: User login
+      tags:
+      - Auth
+  /user/logout:
+    post:
+      consumes:
+      - application/json
+      description: Invalidate the refresh token
+      parameters:
+      - description: Logout request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.LogoutRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+        "500":
+          description: Internal Server Error
+      summary: User logout
+      tags:
+      - Auth
+  /user/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Refresh access token using refresh token
+      parameters:
+      - description: Refresh token
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.RefreshRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.TokenResponse'
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      summary: Refresh token
+      tags:
+      - Auth
+  /user/signup:
+    post:
+      consumes:
+      - application/json
+      description: Register a new user with username and password
+      parameters:
+      - description: Signup info
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.SignupRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+        "500":
+          description: Internal Server Error
+      summary: User signup
+      tags:
+      - Auth
+swagger: "2.0"

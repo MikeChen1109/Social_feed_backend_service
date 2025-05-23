@@ -9,7 +9,10 @@ import (
 	"user-service/routes"
 	"user-service/services"
 
+	_ "user-service/docs"
+	"github.com/swaggo/files"
 	"github.com/gin-gonic/gin"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func init() {
@@ -38,7 +41,8 @@ func main() {
 	}
 	router := gin.Default()
 	router.Use(middleware.CORSMiddleware())
-
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	
 	routes.RegisterUserRoutes(router, userController)
 	router.Run()
 }
