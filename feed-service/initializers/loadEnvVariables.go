@@ -2,14 +2,15 @@ package initializers
 
 import (
 	"log"
+	"os"
 
 	"github.com/joho/godotenv"
 )
 
 func LoadEnvVariables() {
-	// Load environment variables from .env file
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
+	if os.Getenv("APP_ENV") != "prod" {
+		if err := godotenv.Load(); err != nil {
+			log.Println("Warning: .env file not found, fallback to system env")
+		}
 	}
 }
