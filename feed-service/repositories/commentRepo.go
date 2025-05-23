@@ -24,7 +24,12 @@ func (r *CommentRepository) CreateComment(comment *models.Comment) error {
 
 func (r *CommentRepository) PaginatedComments(offset int, limit int, feedId uint) (*models.PaginatedCommentsResponse, error) {
 	var comments []models.Comment
-	err := r.DB.Offset(offset).Limit(limit + 1).Order("created_at DESC").Find(&comments).Error
+	err := r.DB.
+		Where("feed_id = ?", feedId).
+		Offset(offset).Limit(limit + 1).
+		Order("created_at DESC").
+		Find(&comments).Error
+		
 	if err != nil {
 		return nil, err
 	}
