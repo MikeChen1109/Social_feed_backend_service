@@ -25,6 +25,7 @@ func (usersController *UsersController) Signup(c *gin.Context) {
 	err := usersController.AuthService.Signup(body.UsearName, body.Password)
 	if err != nil {
 		errorHandler(c, err)
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "User signed up successfully"})
@@ -43,6 +44,7 @@ func (usersController *UsersController) Login(c *gin.Context) {
 	token, refreshToken, err := usersController.AuthService.Login(body.Username, body.Password)
 	if err != nil {
 		errorHandler(c, err)
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"token": token, "refreshToken": refreshToken})
@@ -60,6 +62,7 @@ func (usersController *UsersController) Refresh(c *gin.Context) {
 	token, refreshToken, err := usersController.AuthService.Refresh(body.RefreshToken)
 	if err != nil {
 		errorHandler(c, err)
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"token": token, "refreshToken": refreshToken})
