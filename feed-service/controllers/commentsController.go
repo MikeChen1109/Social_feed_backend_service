@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"feed-service/common/helpers"
+	"feed-service/models"
 	"feed-service/services"
 	"net/http"
 	"strconv"
@@ -19,19 +20,16 @@ type CommentsController struct {
 // @Tags         Comments
 // @Accept       json
 // @Produce      json
-// @Param        body  body  struct{FeedID uint; Content string}  true  "Comment content"
+// @Param        body  body  models.CreateCommentRequest  true  "Comment content"
 // @Success      200   {object}  models.CommentResponse
 // @Failure      400   
 // @Failure      401   
 // @Failure      500   
 // @Router       /comment [post]
 func (s *CommentsController) CreateComment(c *gin.Context) {
-	var body struct {
-		FeedID  uint
-		Content string
-	}
+	var req models.CreateCommentRequest
 
-	if err := c.Bind(&body); err != nil {
+	if err := c.Bind(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid request body",
 		})
@@ -46,7 +44,7 @@ func (s *CommentsController) CreateComment(c *gin.Context) {
 		return
 	}
 
-	response, apperror := s.CommentsService.CreateComment(body.FeedID, body.Content, claimsModel.UserID, claimsModel.Username)
+	response, apperror := s.CommentsService.CreateComment(req.FeedID, req.Content, claimsModel.UserID, claimsModel.Username)
 	if apperror != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to create comment",

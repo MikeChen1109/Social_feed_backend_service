@@ -1,4 +1,28 @@
 definitions:
+  models.CommentResponse:
+    properties:
+      authorID:
+        type: integer
+      authorName:
+        type: string
+      content:
+        type: string
+      createdAt:
+        type: string
+      feedID:
+        type: integer
+      id:
+        type: integer
+      updatedAt:
+        type: string
+    type: object
+  models.CreateCommentRequest:
+    properties:
+      content:
+        type: string
+      feedID:
+        type: integer
+    type: object
   models.CreateFeedRequest:
     properties:
       content:
@@ -37,6 +61,63 @@ definitions:
 info:
   contact: {}
 paths:
+  /comment:
+    post:
+      consumes:
+      - application/json
+      description: Authenticated user creates a comment on a feed
+      parameters:
+      - description: Comment content
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateCommentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.CommentResponse'
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      summary: Create a new comment
+      tags:
+      - Comments
+  /comment/paginated:
+    get:
+      description: Retrieve comments for a specific feed with pagination
+      parameters:
+      - description: Feed ID
+        in: query
+        name: id
+        required: true
+        type: integer
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+        "500":
+          description: Internal Server Error
+      summary: Get paginated comments for a feed
+      tags:
+      - Comments
   /feed:
     post:
       consumes:
