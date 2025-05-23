@@ -31,12 +31,12 @@ func main() {
 	userController := &controllers.UsersController{AuthService: authService}
 
 	// Initialize Gin router and register routes
-	router := gin.Default()
 	if os.Getenv("APP_ENV") == "prod" {
 		gin.SetMode(gin.ReleaseMode)
 	} else {
 		gin.SetMode(gin.DebugMode)
 	}
+	router := gin.Default()
 	router.Use(middleware.CORSMiddleware())
 
 	routes.RegisterUserRoutes(router, userController)

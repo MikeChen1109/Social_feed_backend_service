@@ -31,12 +31,12 @@ func main() {
 	commentsController := &controllers.CommentsController{CommentsService: commentService}
 
 	// Initialize Gin router and register routes
-	router := gin.Default()
 	if os.Getenv("APP_ENV") == "prod" {
 		gin.SetMode(gin.ReleaseMode)
 	} else {
 		gin.SetMode(gin.DebugMode)
 	}
+	router := gin.Default()
 	router.Use(middleware.CORSMiddleware())
 
 	routes.RegisterFeedRoutes(router, feedsController)
