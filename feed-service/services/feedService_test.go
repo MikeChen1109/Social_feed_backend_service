@@ -82,7 +82,7 @@ func TestGetFeedsSuccess(t *testing.T) {
 	result, err := svc.GetFeeds()
 
 	assert.Nil(t, err)
-	assert.Equal(t, expected, result)
+	assert.Equal(t, expected[0].ToFeedResponse(), &result[0])
 	repo.AssertExpectations(t)
 }
 
@@ -130,7 +130,6 @@ func TestUpdateFeedSuccess(t *testing.T) {
 	feedId := uint(1)
 	repo.On("GetFeedByID", feedId).Return(old, nil)
 	repo.On("UpdateFeed", mock.AnythingOfType("*models.Feed")).Return(nil)
-
 
 	newContent := "new content"
 	newTitle := "new title"
