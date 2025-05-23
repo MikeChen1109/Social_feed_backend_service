@@ -126,7 +126,7 @@ API will be available at: `http://localhost:YOUR_PORT_FROM_ENVIRMENT`
 
 * [x] Comment feature (create, list, delete)
 * [ ] Forget password feature
-* [ ] Swagger/OpenAPI documentation
+* [x] Swagger/OpenAPI documentation
 * [ ] Dockerfile for containerized deployment
 * [ ] Rate limiting
 * [ ] Database performance tuning (e.g. indexes, query optimization, slow query logging)
