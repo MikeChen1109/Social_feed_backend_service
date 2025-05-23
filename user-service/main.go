@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"user-service/controllers"
 	"user-service/initializers"
 	"user-service/middleware"
@@ -31,6 +32,11 @@ func main() {
 
 	// Initialize Gin router and register routes
 	router := gin.Default()
+	if os.Getenv("APP_ENV") == "prod" {
+		gin.SetMode(gin.ReleaseMode)
+	} else {
+		gin.SetMode(gin.DebugMode)
+	}
 	router.Use(middleware.CORSMiddleware())
 
 	routes.RegisterUserRoutes(router, userController)

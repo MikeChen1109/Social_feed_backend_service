@@ -7,6 +7,7 @@ import (
 	"feed-service/repositories"
 	"feed-service/routes"
 	"feed-service/services"
+	"os"
 
 	"github.com/gin-gonic/gin"
 )
@@ -31,6 +32,11 @@ func main() {
 
 	// Initialize Gin router and register routes
 	router := gin.Default()
+	if os.Getenv("APP_ENV") == "prod" {
+		gin.SetMode(gin.ReleaseMode)
+	} else {
+		gin.SetMode(gin.DebugMode)
+	}
 	router.Use(middleware.CORSMiddleware())
 
 	routes.RegisterFeedRoutes(router, feedsController)
