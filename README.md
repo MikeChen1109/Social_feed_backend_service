@@ -117,14 +117,29 @@ API will be available at: `http://localhost:YOUR_PORT_FROM_ENVIRMENT`
 
 ```
 .
-├── controllers/    # Route handlers
-├── middleware/     # JWT middleware, CORS etc.
-├── models/         # GORM models
-├── routes/         # API route definitions
-├── services/       # Business logic layer
-├── main.go         # App entry point
-├── go.mod          # Module config
-└── .env.example    # Example env file
+├── common/             # Shared utilities and error definitions
+│   ├── appErrors/      # Custom error types
+│   └── helpers/        # Helper functions
+│
+├── controllers/        # Route handlers
+├── docs/               # Swagger/OpenAPI documentation
+├── initializers/       # App initialization (DB, Redis, env loading)
+├── middleware/         # Middleware (JWT, CORS, etc.)
+├── migrate/            # Database migration files or tools
+├── models/             # GORM models and API request/response structs
+├── repositories/       # Data access layer (DB operations)
+├── routes/             # Route definitions and registration
+├── services/           # Business logic layer
+│
+├── .env                # Environment config
+├── .env.example        # Example env file
+├── .gitignore          # Git ignore rules
+├── cover.out           # Code coverage report
+├── go.mod              # Go module config
+├── go.sum              # Module dependency checksums
+├── main.go             # App entry point
+└── makefile            # run/test shortcuts
+
 ```
 
 ---
