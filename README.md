@@ -104,6 +104,13 @@ API will be available at: `http://localhost:YOUR_PORT_FROM_ENVIRMENT`
 | PUT    | /feed/\:id        | Update a feed (auth)                              |
 | DELETE | /feed/\:id        | Delete a feed (auth)                              |
 
+### Comment
+
+| Method | Endpoint              | Description                                                                |
+| ------ | --------------------- | ---------------------------------------------------------------------------|
+| POST   | /comment/create       | Create a comment on a specific feed (auth)                                 |
+| GET    | /comment/paginated    | Get paginated comments for a feed (with page and limit query)              |
+
 ---
 
 ## Folder Structure
