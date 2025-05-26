@@ -1,0 +1,25 @@
+version: '3.8'
+services:
+  feed-service:
+    build: ./feed-service
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+
+  user-service:
+    build: ./user-service
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+
+  api-gateway:
+    build: ./api-gateway
+    ports:
+      - "2000:2000"
+    environment:
+      - PORT=2000
+    depends_on:
+      - feed-service
+      - user-service
