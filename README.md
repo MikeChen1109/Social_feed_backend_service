@@ -149,6 +149,7 @@ API will be available at: `http://localhost:YOUR_PORT_FROM_ENVIRMENT`
 * [x] Comment feature (create, list, delete)
 * [x] Swagger/OpenAPI documentation
 * [x] Unit testing with testify and mocks
+* [x] API Gateway for routing
 * [ ] Forget password feature
 * [ ] Dockerfile for containerized deployment
 * [ ] Kubernetes manifests for local deployment
