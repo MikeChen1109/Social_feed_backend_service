@@ -2,6 +2,7 @@ package utils
 
 import (
 	"io"
+	"log"
 	"net/http"
 	"strings"
 
@@ -30,6 +31,7 @@ func ProxyRequest(c *gin.Context, targetBaseURL string) {
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
+	log.Print("Proxying request to: ", targetURL)
 	if err != nil {
 		c.JSON(http.StatusBadGateway, gin.H{"error": "Service unreachable"})
 		return
