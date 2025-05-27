@@ -1,8 +1,8 @@
-FROM golang:1.24.0 AS builder
+FROM golang:1.24.0
 
 WORKDIR /app
 COPY ./user-service .
+
 RUN go mod download
-RUN go build -o main .
-EXPOSE 4000
-CMD ["./main"]
+
+CMD ["go", "run", "main.go"]
