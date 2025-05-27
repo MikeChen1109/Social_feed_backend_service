@@ -1,7 +1,7 @@
 FROM golang:1.24.0 AS builder
 
 WORKDIR /app
-COPY . .
+COPY ./user-service .
 RUN go mod download
 RUN go build -o main .
 EXPOSE 4000

@@ -1,8 +1,8 @@
 FROM golang:1.24.0 AS builder
 
 WORKDIR /app
-COPY . .
+COPY ./api-gateway .
 RUN go mod download
 RUN go build -o main .
-EXPOSE 3000
+EXPOSE 2000
 CMD ["./main"]
