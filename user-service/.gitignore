@@ -13,6 +13,7 @@
 *.so
 *.dylib
 *.env
+.env.prod
 
 # Test binary, built with `go test -c`
 *.test
