@@ -49,6 +49,11 @@ spec:
             secretKeyRef:
               name: user-secret
               key: APP_ENV
+        resources:
+          requests:
+            cpu: "200m"
+            memory: "512Mi"
+            ephemeral-storage: "512Mi"
 ---
 apiVersion: v1
 kind: Service
