@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-service
+  template:
+    metadata:
+      labels:
+        app: user-service
+    spec:
+      containers:
+      - name: user-service
+        image: baby831109/user-service-prod:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 4000
+        env:
+        - name: PORT
+          valueFrom:
+            secretKeyRef:
+              name: user-secret
+              key: PORT
+        - name: DB_URL
+          valueFrom:
+            secretKeyRef:
+              name: user-secret
+              key: DB_URL
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: user-secret
+              key: JWT_SECRET
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: user-secret
+              key: REDIS_URL
+        - name: FRONTEND_ORIGIN
+          valueFrom:
+            secretKeyRef:
+              name: user-secret
+              key: FRONTEND_ORIGIN
+        - name: APP_ENV
+          valueFrom:
+            secretKeyRef:
+              name: user-secret
+              key: APP_ENV
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-service
+spec:
+  selector:
+    app: user-service
+  ports:
+    - protocol: TCP
+      port: 4000
+      targetPort: 4000
+  type: ClusterIP

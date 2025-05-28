@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: feed-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: feed-service
+  template:
+    metadata:
+      labels:
+        app: feed-service
+    spec:
+      containers:
+      - name: feed-service
+        image: baby831109/feed-service-prod:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3000
+        env:
+        - name: PORT
+          valueFrom:
+            secretKeyRef:
+              name: feed-secret
+              key: PORT
+        - name: DB_URL
+          valueFrom:
+            secretKeyRef:
+              name: feed-secret
+              key: DB_URL
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: feed-secret
+              key: JWT_SECRET
+        - name: FRONTEND_ORIGIN
+          valueFrom:
+            secretKeyRef:
+              name: feed-secret
+              key: FRONTEND_ORIGIN
+        - name: APP_ENV
+          valueFrom:
+            secretKeyRef:
+              name: feed-secret
+              key: APP_ENV
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: feed-service
+spec:
+  selector:
+    app: feed-service
+  ports:
+    - protocol: TCP
+      port: 3000
+      targetPort: 3000
+  type: ClusterIP
