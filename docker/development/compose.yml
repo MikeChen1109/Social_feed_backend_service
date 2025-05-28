@@ -5,8 +5,8 @@ services:
       dockerfile: docker/development/Dockerfile.feed
     ports:
       - "3000:3000"
-    environment:
-      - PORT=3000
+    env_file:
+      - ./feed-service/.env
 
   user-service:
     build:
@@ -14,8 +14,8 @@ services:
       dockerfile: docker/development/Dockerfile.user
     ports:
       - "4000:4000"
-    environment:
-      - PORT=4000
+    env_file:
+      - ./user-service/.env
 
   api-gateway:
     build:
@@ -23,8 +23,8 @@ services:
       dockerfile: docker/development/Dockerfile.gateway
     ports:
       - "2000:2000"
-    environment:
-      - PORT=2000
+    env_file:
+      - ./api-gateway/.env
     depends_on:
       - feed-service
       - user-service

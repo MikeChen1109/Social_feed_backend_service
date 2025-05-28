@@ -1,0 +1,36 @@
+# Ignore Git files and folders
+.git
+.gitignore
+
+# Ignore build outputs and binaries
+*.out
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Ignore Go module cache and compiled binaries
+pkg/
+bin/
+
+# Ignore IDE/editor configs
+.vscode/
+.idea/
+*.swp
+
+# Ignore logs and temp files
+*.log
+*.test
+*.tmp
+
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
+
+# Ignore frontend dependencies (if present)
+node_modules/
+
+# Ignore files not needed during Docker build
+docker-compose.yml
+**/.env 
+.env
