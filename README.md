@@ -152,7 +152,7 @@ API will be available at: `http://localhost:YOUR_PORT_FROM_ENVIRMENT`
 * [x] API Gateway for routing
 * [ ] Forget password feature
 * [x] Dockerfile for containerized deployment
-* [ ] Kubernetes manifests for local deployment
+* [x] Kubernetes manifests for local deployment
 * [ ] gRPC support with proto definitions and shared service layer
 * [ ] Prometheus metrics endpoint and Grafana dashboard
 * [ ] Rate limiting (e.g. IP-based using middleware or Redis)
