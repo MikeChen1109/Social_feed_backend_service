@@ -3,6 +3,7 @@ package main
 import (
 	initializers "api-gateway/initalizers"
 	"api-gateway/routes"
+	"os"
 
 	"github.com/gin-gonic/gin"
 )
@@ -12,6 +13,11 @@ func init() {
 }
 
 func main() {
+	if os.Getenv("APP_ENV") == "prod" {
+		gin.SetMode(gin.ReleaseMode)
+	} else {
+		gin.SetMode(gin.DebugMode)
+	}
 	router := gin.Default()
 	routes.RegisterRoutes(router)
 	router.Run()
