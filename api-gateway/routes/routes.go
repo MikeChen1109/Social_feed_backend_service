@@ -16,4 +16,5 @@ func RegisterRoutes(r *gin.Engine) {
 
 	api.Any("/feed/*proxyPath", handlers.ProxyToFeedService)
 	api.Any("/user/*proxyPath", handlers.ProxyToUserService)
+	api.Any("/comment/*proxyPath", handlers.ProxyToFeedService)
 }
