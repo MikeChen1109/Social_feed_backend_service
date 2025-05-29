@@ -116,28 +116,15 @@ API will be available at: `http://localhost:YOUR_PORT_FROM_ENVIRMENT`
 
 ```
 .
-├── common/             # Shared utilities and error definitions
-│   ├── appErrors/      # Custom error types
-│   └── helpers/        # Helper functions
-│
-├── controllers/        # Route handlers
-├── docs/               # Swagger/OpenAPI documentation
-├── initializers/       # App initialization (DB, Redis, env loading)
-├── middleware/         # Middleware (JWT, CORS, etc.)
-├── migrate/            # Database migration files or tools
-├── models/             # GORM models and API request/response structs
-├── repositories/       # Data access layer (DB operations)
-├── routes/             # Route definitions and registration
-├── services/           # Business logic layer
-│
-├── .env                # Environment config
-├── .env.example        # Example env file
-├── .gitignore          # Git ignore rules
-├── cover.out           # Code coverage report
-├── go.mod              # Go module config
-├── go.sum              # Module dependency checksums
-├── main.go             # App entry point
-└── makefile            # run/test shortcuts
+├── api-gateway/        # API Gateway handling request forwarding and service routing
+├── feed-service/       # Microservice for feed-related features (posts, timeline, etc.)
+├── user-service/       # Microservice for user management (auth, profile, etc.)
+├── k8s/                # Kubernetes deployment manifests (Deployment, Service, Ingress)
+├── docker/             # Dockerfiles and related build configurations
+├── .github/            # GitHub Actions for CI/CD workflows
+├── .dockerignore       # Docker ignore rules
+├── makefile            # Common build, run, and test shortcuts
+├── README.md           # Project documentation
 
 ```
 
