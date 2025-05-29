@@ -2,7 +2,7 @@ FROM golang:1.24.0 AS builder
 WORKDIR /app
 COPY . .
 WORKDIR /app/api-gateway
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o user-service
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o api-gateway
 
 FROM alpine:latest
 RUN apk --no-cache add ca-certificates

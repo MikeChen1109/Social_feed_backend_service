@@ -1,0 +1,27 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: api-gateway-ingress
+  annotations:
+    ingressClassName: "gce" 
+    networking.gke.io/managed-certificates: gopost-managed-cert
+spec:
+  rules:
+    - host: side-project-gopost.xyz
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway
+                port:
+                  number: 2000
+---
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: gopost-managed-cert
+spec:
+  domains:
+    - side-project-gopost.xyz
