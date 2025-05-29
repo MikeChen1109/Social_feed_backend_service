@@ -149,6 +149,6 @@ API will be available at: `http://localhost:YOUR_PORT_FROM_ENVIRMENT`
 
 ## License
 
-MIT License
+This project is licensed under the [MIT License](LICENSE).
 
 
