@@ -2,6 +2,7 @@ package main
 
 import (
 	initializers "api-gateway/initalizers"
+	"api-gateway/middleware"
 	"api-gateway/routes"
 	"os"
 
@@ -19,6 +20,7 @@ func main() {
 		gin.SetMode(gin.DebugMode)
 	}
 	router := gin.Default()
+	router.Use(middleware.CORSMiddleware())
 	routes.RegisterRoutes(router)
 	router.Run()
 }

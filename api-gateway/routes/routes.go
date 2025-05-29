@@ -2,15 +2,16 @@ package routes
 
 import (
 	"api-gateway/handlers"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
 func RegisterRoutes(r *gin.Engine) {
 	r.GET("/", func(c *gin.Context) {
-		c.JSON(200, gin.H{"status": "ok"})
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
-	
+
 	api := r.Group("/api")
 
 	api.Any("/feed/*proxyPath", handlers.ProxyToFeedService)
