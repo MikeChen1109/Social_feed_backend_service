@@ -3,7 +3,7 @@
 [![Tests](https://github.com/MikeChen1109/Social_feed_backend_service/actions/workflows/ci.yml/badge.svg)](https://github.com/MikeChen1109/Social_feed_backend_service/actions/workflows/ci.yml)
 
 
-A simple backend service built with **Golang**, **Gin**, and **GORM**, designed to support basic social feed features including authentication, posting, and feed management. This project is suitable for learning, showcasing fullstack backend deployment, or as a starter template.
+A simple backend service built with **Golang**, **Gin**, and **GORM**, featuring authentication and social feed management. Deployed with **Docker** and **Kubernetes** on **GKE**, suitable for learning or as a starter template.
 
 ---
 
@@ -16,6 +16,7 @@ A simple backend service built with **Golang**, **Gin**, and **GORM**, designed 
 * Pagination support
 * Middleware-based route protection
 * Clean folder structure with MVC pattern
+* Dockerized microservices deployed to GKE using Kubernetes
 
 ---
 
@@ -33,7 +34,7 @@ A simple backend service built with **Golang**, **Gin**, and **GORM**, designed 
 
 This project uses the following external services:
 
-* [Render](https://render.com/): Hosting backend API
+* [Google Kubernetes Engine (GKE)](https://cloud.google.com/kubernetes-engine): Hosting backend services
 * [Supabase](https://supabase.com/): PostgreSQL database provider
 * [Upstash](https://upstash.com/): Serverless Redis for caching / refresh token storage
 
