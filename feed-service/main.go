@@ -3,7 +3,6 @@ package main
 import (
 	"feed-service/controllers"
 	"feed-service/initializers"
-	"feed-service/middleware"
 	"feed-service/repositories"
 	"feed-service/routes"
 	"feed-service/services"
@@ -12,8 +11,8 @@ import (
 	_ "feed-service/docs"
 
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-	"github.com/swaggo/files"
 )
 
 func init() {
@@ -41,7 +40,6 @@ func main() {
 		gin.SetMode(gin.DebugMode)
 	}
 	router := gin.Default()
-	router.Use(middleware.CORSMiddleware())
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	routes.RegisterFeedRoutes(router, feedsController)
