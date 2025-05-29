@@ -12,7 +12,7 @@ A simple backend service built with **Golang**, **Gin**, and **GORM**, featuring
 * JWT-based user authentication (signup/login/logout/refresh)
 * Feed CRUD operations
 * Comment on specific Feed by ID
-* Refresh token storage in Redis (Upstash)
+* Refresh token storage in Redis
 * Pagination support
 * Middleware-based route protection
 * Clean folder structure with MVC pattern
