@@ -25,8 +25,7 @@ A simple backend service built with **Golang**, **Gin**, and **GORM**, designed 
 * **Database**: PostgreSQL (via Supabase), sqlite (for tests), miniredis(for tests)
 * **Auth**: JWT + Refresh Token  
 * **Cache**: Redis (via Upstash)
-* **Deployment**: Render
-* **CI**: GitHub Actions
+* **CI/CD & Deployment**: GitHub Actions, Docker, Kubernetes, GKE, Render
 
 ---
 
