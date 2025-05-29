@@ -5,6 +5,7 @@ metadata:
   annotations:
     ingressClassName: "gce" 
     networking.gke.io/managed-certificates: gopost-managed-cert
+    networking.gke.io/disable-http-redirect: "true"
 spec:
   rules:
     - host: side-project-gopost.xyz
