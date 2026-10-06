@@ -45,7 +45,7 @@ func (s *CommentsController) CreateComment(c *gin.Context) {
 		return
 	}
 
-	response, apperror := s.CommentsService.CreateComment(req.FeedID, req.Content, claimsModel.UserID, claimsModel.Username)
+	response, apperror := s.CommentsService.CreateComment(c.Request.Context(), req.FeedID, req.Content, claimsModel.UserID, claimsModel.Username)
 	if apperror != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to create comment",
@@ -62,39 +62,25 @@ func (s *CommentsController) CreateComment(c *gin.Context) {
 // @Tags         Comments
 // @Produce      json
 // @Param        id     query     int  true   "Feed ID"
-// @Param        page   query     int  false  "Page number"
+// @Param        cursor query string false "Opaque nextCursor from the previous response"
 // @Param        limit  query     int  false  "Items per page"
-// @Success      200
+// @Success      200 {object} models.PaginatedCommentsResponse
 // @Failure      400
 // @Failure      500
 // @Router       /comment/paginated [get]
 func (s *CommentsController) PaginatedComments(c *gin.Context) {
-	pageStr := c.DefaultQuery("page", "1")
-	limitStr := c.DefaultQuery("limit", "10")
-	feedIdStr := c.DefaultQuery("id", "0")
-
-	feedID, err := strconv.Atoi(feedIdStr)
-	if err != nil || feedID < 1 {
-		c.AbortWithStatus(http.StatusBadRequest)
+	feedID, err := strconv.ParseUint(c.Query("id"), 10, 63)
+	if err != nil || feedID == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid feed ID"})
+		return
+	}
+	cursor, limit, err := models.ParsePagination(c.Request.URL.Query(), models.CommentCursorScope(uint(feedID)))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	page, err := strconv.Atoi(pageStr)
-	if err != nil || page < 1 {
-		page = 1
-	}
-
-	limit, err := strconv.Atoi(limitStr)
-	if err != nil || limit < 1 || limit > 100 {
-		limit = 10
-	}
-
-	if page-1 > int(^uint(0)>>1)/limit {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Page is too large"})
-		return
-	}
-	offset := (page - 1) * limit
-	response, apperror := s.CommentsService.PaginatedComments(offset, limit, uint(feedID))
+	response, apperror := s.CommentsService.PaginatedComments(c.Request.Context(), cursor, limit, uint(feedID))
 
 	if apperror != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{

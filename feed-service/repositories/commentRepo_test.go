@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"context"
 	"feed-service/models"
 	"testing"
 
@@ -36,7 +37,7 @@ func TestCreateCommentSuccess(t *testing.T) {
 	defer dbCleanUp()
 
 	comment := models.Comment{AuthorName: "name", AuthorID: 1, FeedID: 1, Content: "content"}
-	err := repo.CreateComment(&comment)
+	err := repo.CreateComment(context.Background(), &comment)
 
 	assert.Nil(t, err)
 }
@@ -45,14 +46,14 @@ func TestPaginatedCommentsSuccess(t *testing.T) {
 	repo, dbCleanUp := setupCommentRepoForTest()
 	defer dbCleanUp()
 
-	offset := 0
+	var cursor *models.Cursor
 	limit := 10
 	feedId := uint(1)
 	generateComments(repo.DB)
-	response, err := repo.PaginatedComments(offset, limit, feedId)
+	response, err := repo.PaginatedComments(context.Background(), cursor, limit, feedId)
 
 	assert.Nil(t, err)
 	assert.Equal(t, 10, len(response.Data))
 	assert.Equal(t, true, response.Meta.HasMore)
-	assert.Equal(t, 1, response.Meta.Page)
+	assert.NotEmpty(t, response.Meta.NextCursor)
 }

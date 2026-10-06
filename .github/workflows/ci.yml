@@ -43,6 +43,14 @@ jobs:
         run: make local-up
       - name: Verify API flow
         run: make local-test
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 1.24.3
+      - name: Verify PostgreSQL cancellation and cursor pagination
+        working-directory: feed-service
+        env:
+          TEST_POSTGRES_DSN: postgres://social:social_local@localhost:5433/social_feed?sslmode=disable
+        run: go test -race ./repositories -run TestPostgres
       - name: Verify scrapes and dashboard queries
         run: make monitoring-test
       - name: Show service logs on failure

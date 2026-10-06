@@ -6,7 +6,7 @@ type PaginatedFeedsResponse struct {
 }
 
 type Meta struct {
-	Page    int  `json:"page"`
-	Limit   int  `json:"limit"`
-	HasMore bool `json:"hasMore"`
+	NextCursor string `json:"nextCursor,omitempty"`
+	Limit      int    `json:"limit"`
+	HasMore    bool   `json:"hasMore"`
 }

@@ -7,7 +7,6 @@ import (
 	"time"
 	appErrors "user-service/common/appErrors"
 	"user-service/models"
-	"user-service/repositories"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
@@ -19,39 +18,36 @@ import (
 
 type mockUserRepo struct{ mock.Mock }
 
-func (m *mockUserRepo) FindByUsername(username string) (*models.User, error) {
+func (m *mockUserRepo) FindByUsername(ctx context.Context, username string) (*models.User, error) {
 	args := m.Called(username)
 	return args.Get(0).(*models.User), args.Error(1)
 }
-func (m *mockUserRepo) Create(u *models.User) error {
+func (m *mockUserRepo) Create(ctx context.Context, u *models.User) error {
 	args := m.Called(u)
 	return args.Error(0)
 }
-func (m *mockUserRepo) FindByID(id uint) (*models.User, error) {
+func (m *mockUserRepo) FindByID(ctx context.Context, id uint) (*models.User, error) {
 	args := m.Called(id)
 	return args.Get(0).(*models.User), args.Error(1)
 }
 
 type mockTokenRepo struct{ mock.Mock }
 
-func (m *mockTokenRepo) StoreRefreshToken(token string, uid uint, exp time.Duration) error {
+func (m *mockTokenRepo) StoreRefreshToken(ctx context.Context, token string, uid uint, exp time.Duration) error {
 	args := m.Called(token, uid, exp)
 	return args.Error(0)
 }
-func (m *mockTokenRepo) GetUserIDByRefreshToken(token string) (uint, error) {
+func (m *mockTokenRepo) GetUserIDByRefreshToken(ctx context.Context, token string) (uint, error) {
 	args := m.Called(token)
 	return args.Get(0).(uint), args.Error(1)
 }
-func (m *mockTokenRepo) DeleteRefreshToken(token string) error {
+func (m *mockTokenRepo) DeleteRefreshToken(ctx context.Context, token string) error {
 	args := m.Called(token)
 	return args.Error(0)
 }
-func (m *mockTokenRepo) RotateRefreshToken(oldToken, newToken string, uid uint, exp time.Duration) error {
+func (m *mockTokenRepo) RotateRefreshToken(ctx context.Context, oldToken, newToken string, uid uint, exp time.Duration) error {
 	args := m.Called(oldToken, newToken, uid, exp)
 	return args.Error(0)
-}
-func (m *mockTokenRepo) WithContext(_ context.Context) repositories.TokenRepositoryInterface {
-	return m
 }
 
 /* ---------- helper ---------- */
@@ -81,7 +77,7 @@ func TestLoginSuccess(t *testing.T) {
 	userRepo.On("FindByUsername", "mike").Return(u, nil)
 	tokenRepo.On("StoreRefreshToken", mock.AnythingOfType("string"), userId, mock.Anything).Return(nil)
 
-	access, refresh, err := svc.Login("mike", "password")
+	access, refresh, err := svc.Login(context.Background(), "mike", "password")
 
 	assert.Empty(err)
 	assert.NotEmpty(access)
@@ -104,7 +100,7 @@ func TestLoginWhenWrongPassword(t *testing.T) {
 	u := &models.User{Username: "mike", Password: mustHash("password")}
 	userRepo.On("FindByUsername", "mike").Return(u, nil)
 
-	_, _, appErr := svc.Login("mike", "wrong")
+	_, _, appErr := svc.Login(context.Background(), "mike", "wrong")
 	assert.Equal(t, appErrors.ErrInvalidPassword, appErr)
 	userRepo.AssertExpectations(t)
 }
@@ -114,7 +110,7 @@ func TestLoginWhenInvalidUsernameOrPassword(t *testing.T) {
 	tokenRepo := new(mockTokenRepo)
 	svc := &AuthService{UserRepo: userRepo, TokenRepo: tokenRepo}
 
-	_, _, appErr := svc.Login("", "")
+	_, _, appErr := svc.Login(context.Background(), "", "")
 	assert.Equal(t, appErrors.ErrInvalidUsernameOrPassword, appErr)
 }
 
@@ -125,7 +121,7 @@ func TestLoginWhenUserNotExist(t *testing.T) {
 
 	userRepo.On("FindByUsername", "mike").Return((*models.User)(nil), appErrors.ErrUserNotFound)
 
-	_, _, appErr := svc.Login("mike", "wrong")
+	_, _, appErr := svc.Login(context.Background(), "mike", "wrong")
 	assert.Equal(t, appErrors.ErrUserNotFound, appErr)
 	userRepo.AssertExpectations(t)
 }
@@ -138,7 +134,7 @@ func TestSignupSuccess(t *testing.T) {
 	userRepo.On("FindByUsername", "new").Return((*models.User)(nil), appErrors.ErrUserNotFound)
 	userRepo.On("Create", mock.AnythingOfType("*models.User")).Return(nil)
 
-	err := svc.Signup("new", "pw")
+	err := svc.Signup(context.Background(), "new", "pw")
 	assert.Nil(t, err)
 	userRepo.AssertExpectations(t)
 }
@@ -148,7 +144,7 @@ func TestSignupWhenInvalidUsernameOrPassword(t *testing.T) {
 	tokenRepo := new(mockTokenRepo)
 	svc := &AuthService{UserRepo: userRepo, TokenRepo: tokenRepo}
 
-	err := svc.Signup("", "")
+	err := svc.Signup(context.Background(), "", "")
 	assert.NotNil(t, err)
 	assert.Equal(t, appErrors.ErrInvalidUsernameOrPassword, err)
 }
@@ -158,7 +154,7 @@ func TestLogout(t *testing.T) {
 	tokenRepo.On("DeleteRefreshToken", "r1").Return(nil)
 
 	svc := &AuthService{TokenRepo: tokenRepo}
-	err := svc.Logout("r1")
+	err := svc.Logout(context.Background(), "r1")
 
 	assert.Nil(t, err)
 	tokenRepo.AssertCalled(t, "DeleteRefreshToken", "r1")
@@ -181,7 +177,7 @@ func TestRefreshSuccess(t *testing.T) {
 	userRepo.On("FindByID", userId).Return(u, nil)
 	tokenRepo.On("RotateRefreshToken", oldRefresh, newRefreshMatcher, userId, mock.Anything).Return(nil)
 
-	access, newRefresh, err := svc.Refresh(oldRefresh)
+	access, newRefresh, err := svc.Refresh(context.Background(), oldRefresh)
 
 	assert.Nil(t, err)
 	assert.NotEmpty(t, access)
@@ -202,7 +198,7 @@ func TestRefreshWhenUserNotExist(t *testing.T) {
 	tokenRepo.On("GetUserIDByRefreshToken", oldRefresh).Return(userId, nil)
 	userRepo.On("FindByID", userId).Return((*models.User)(nil), appErrors.ErrUserNotFound)
 
-	access, newRefresh, err := svc.Refresh(oldRefresh)
+	access, newRefresh, err := svc.Refresh(context.Background(), oldRefresh)
 
 	assert.NotNil(t, err)
 	assert.Empty(t, access)

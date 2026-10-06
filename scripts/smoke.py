@@ -52,7 +52,7 @@ try:
     ok('PUT', f'/api/feed/{feed_id}', {'title': 'Local smoke test', 'content': 'Updated by author'}, tokens['token'])
     retrieved = ok('GET', f'/api/feed/{feed_id}')
     assert retrieved['Title'] == 'Local smoke test'
-    page = ok('GET', '/api/feed/paginated?page=1&limit=10')
+    page = ok('GET', '/api/feed/paginated?limit=10')
     assert any(item['ID'] == feed_id for item in page['data'])
     old_refresh = tokens['refreshToken']
     barrier = Barrier(8)

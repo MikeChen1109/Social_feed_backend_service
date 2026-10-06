@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/gomodule/redigo/redis"
 	"log"
 	"net/http"
 	"os"
@@ -59,7 +60,12 @@ func main() {
 			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "not ready"})
 			return
 		}
-		if err := redisClient.Ping(ctx).Err(); err != nil {
+		conn, err := redisClient.GetContext(ctx)
+		if err == nil {
+			defer conn.Close()
+			_, err = redis.DoContext(conn, ctx, "PING")
+		}
+		if err != nil {
 			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "not ready"})
 			return
 		}

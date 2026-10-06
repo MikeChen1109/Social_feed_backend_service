@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"errors"
 	appErrors "feed-service/common/appErrors"
 	"feed-service/models"
@@ -14,32 +15,32 @@ import (
 
 type mockFeedRepo struct{ mock.Mock }
 
-func (m *mockFeedRepo) CreateFeed(feed *models.Feed) error {
+func (m *mockFeedRepo) CreateFeed(ctx context.Context, feed *models.Feed) error {
 	args := m.Called(feed)
 	return args.Error(0)
 }
 
-func (m *mockFeedRepo) GetFeeds() ([]models.Feed, error) {
+func (m *mockFeedRepo) GetFeeds(ctx context.Context) ([]models.Feed, error) {
 	args := m.Called()
 	return args.Get(0).([]models.Feed), args.Error(1)
 }
 
-func (m *mockFeedRepo) PaginatedFeeds(offset int, limit int) (*models.PaginatedFeedsResponse, error) {
-	args := m.Called(offset, limit)
+func (m *mockFeedRepo) PaginatedFeeds(ctx context.Context, cursor *models.Cursor, limit int) (*models.PaginatedFeedsResponse, error) {
+	args := m.Called(cursor, limit)
 	return args.Get(0).(*models.PaginatedFeedsResponse), args.Error(1)
 }
 
-func (m *mockFeedRepo) GetFeedByID(id uint) (*models.Feed, error) {
+func (m *mockFeedRepo) GetFeedByID(ctx context.Context, id uint) (*models.Feed, error) {
 	args := m.Called(id)
 	return args.Get(0).(*models.Feed), args.Error(1)
 }
 
-func (m *mockFeedRepo) UpdateFeed(feed *models.Feed) error {
+func (m *mockFeedRepo) UpdateFeed(ctx context.Context, feed *models.Feed) error {
 	args := m.Called(feed)
 	return args.Error(0)
 }
 
-func (m *mockFeedRepo) DeleteFeed(id uint) error {
+func (m *mockFeedRepo) DeleteFeed(ctx context.Context, id uint) error {
 	args := m.Called(id)
 	return args.Error(0)
 }
@@ -56,7 +57,7 @@ func TestCreateFeedSuccess(t *testing.T) {
 	feedContent := "content"
 	repo.On("CreateFeed", mock.AnythingOfType("*models.Feed")).Return(nil)
 
-	result, err := svc.CreateFeed(feedTitle, feedContent, userId, username)
+	result, err := svc.CreateFeed(context.Background(), feedTitle, feedContent, userId, username)
 
 	assert.Nil(t, err)
 	assert.Equal(t, feedTitle, result.Title)
@@ -68,7 +69,7 @@ func TestCreateFeedSuccess(t *testing.T) {
 
 func TestCreateFeedWhenEmptyTitle(t *testing.T) {
 	svc := &FeedService{}
-	result, err := svc.CreateFeed("", "content", 1, "Mike")
+	result, err := svc.CreateFeed(context.Background(), "", "content", 1, "Mike")
 	assert.Nil(t, result)
 	assert.Equal(t, appErrors.ErrFeedInvalidContentOrTitle, err)
 }
@@ -79,7 +80,7 @@ func TestGetFeedsSuccess(t *testing.T) {
 	expected := []models.Feed{{AuthorName: "mike"}, {AuthorName: "mike"}}
 	repo.On("GetFeeds").Return(expected, nil)
 
-	result, err := svc.GetFeeds()
+	result, err := svc.GetFeeds(context.Background())
 
 	assert.Nil(t, err)
 	assert.Equal(t, expected[0].ToFeedResponse(), &result[0])
@@ -91,7 +92,7 @@ func TestGetFeedsWhenDBError(t *testing.T) {
 	svc := &FeedService{FeedRepo: repo}
 	repo.On("GetFeeds").Return([]models.Feed(nil), errors.New("db error"))
 
-	result, err := svc.GetFeeds()
+	result, err := svc.GetFeeds(context.Background())
 	assert.Nil(t, result)
 	assert.Equal(t, appErrors.DatabaseError, err)
 }
@@ -100,10 +101,10 @@ func TestPaginatedFeedsSuccess(t *testing.T) {
 	repo := new(mockFeedRepo)
 	svc := &FeedService{FeedRepo: repo}
 
-	paginated := &models.PaginatedFeedsResponse{Data: []models.Feed{{AuthorName: "mikde"}}, Meta: models.Meta{Page: 1, Limit: 10, HasMore: false}}
-	repo.On("PaginatedFeeds", 0, 10).Return(paginated, nil)
+	paginated := &models.PaginatedFeedsResponse{Data: []models.Feed{{AuthorName: "mikde"}}, Meta: models.Meta{Limit: 10, HasMore: false}}
+	repo.On("PaginatedFeeds", (*models.Cursor)(nil), 10).Return(paginated, nil)
 
-	resp, err := svc.PaginatedFeeds(0, 10)
+	resp, err := svc.PaginatedFeeds(context.Background(), nil, 10)
 	assert.Nil(t, err)
 	assert.Equal(t, len(paginated.Data), len(resp.Data))
 	assert.Equal(t, false, resp.Meta.HasMore)
@@ -117,7 +118,7 @@ func TestGetFeedByIDSuccess(t *testing.T) {
 	feed.ID = feedId
 	repo.On("GetFeedByID", feed.ID).Return(feed, nil)
 
-	result, err := svc.GetFeedByID(feedId)
+	result, err := svc.GetFeedByID(context.Background(), feedId)
 	assert.Nil(t, err)
 	assert.Equal(t, feedId, result.ID)
 }
@@ -133,13 +134,13 @@ func TestUpdateFeedSuccess(t *testing.T) {
 
 	newContent := "new content"
 	newTitle := "new title"
-	err := svc.UpdateFeed(feedId, 1, newTitle, newContent)
+	err := svc.UpdateFeed(context.Background(), feedId, 1, newTitle, newContent)
 	assert.Nil(t, err)
 }
 
 func TestUpdateFeedWhenFieldsEmpty(t *testing.T) {
 	svc := &FeedService{}
-	err := svc.UpdateFeed(1, 1, "", "")
+	err := svc.UpdateFeed(context.Background(), 1, 1, "", "")
 
 	assert.Equal(t, appErrors.ErrFeedInvalidContentOrTitle, err)
 }
@@ -150,6 +151,6 @@ func TestDeleteFeedSuccess(t *testing.T) {
 	repo.On("GetFeedByID", uint(10)).Return(&models.Feed{AuthorID: 1}, nil)
 	repo.On("DeleteFeed", uint(10)).Return(nil)
 
-	err := svc.DeleteFeed(10, 1)
+	err := svc.DeleteFeed(context.Background(), 10, 1)
 	assert.Nil(t, err)
 }
