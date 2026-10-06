@@ -28,9 +28,11 @@ def wait_for(check, description):
         time.sleep(1)
     raise AssertionError(description + ' did not become ready')
 
-targets = get('http://localhost:9090/api/v1/targets')['data']['activeTargets']
-assert len(targets) == 3 and all(t['health'] == 'up' for t in targets), targets
-print('PASS all three Prometheus targets healthy')
+def targets_healthy():
+    targets = get('http://localhost:9090/api/v1/targets')['data']['activeTargets']
+    return len(targets) == 3 and all(t['health'] == 'up' for t in targets)
+# A ready Prometheus process can still be awaiting its first scheduled scrape.
+wait_for(targets_healthy, 'all three Prometheus targets healthy')
 credentials = {'username': 'monitor_' + uuid.uuid4().hex, 'password': 'LocalMonitor123!'}
 post(4000, '/user/signup', credentials)
 token = post(4000, '/user/login', credentials)['token']
