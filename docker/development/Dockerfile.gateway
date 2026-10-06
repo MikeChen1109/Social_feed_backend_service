@@ -1,6 +1,7 @@
 FROM golang:1.24.0
 
 WORKDIR /app
+COPY ./observability /observability
 COPY ./api-gateway/go.mod ./
 COPY ./api-gateway/go.sum ./
 RUN go mod download

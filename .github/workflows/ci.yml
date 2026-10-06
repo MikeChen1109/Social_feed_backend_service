@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service: [feed-service, user-service, api-gateway]
+        service: [feed-service, user-service, api-gateway, observability]
 
     steps:
     - name: Checkout code
@@ -33,3 +33,21 @@ jobs:
     - name: Run tests
       working-directory: ${{ matrix.service }}
       run: go test -race ./... -coverprofile=cover.out
+
+  monitoring-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start local stack
+        run: make local-up
+      - name: Verify API flow
+        run: make local-test
+      - name: Verify scrapes and dashboard queries
+        run: make monitoring-test
+      - name: Show service logs on failure
+        if: failure()
+        run: docker compose -f compose.local.yml logs --tail=100
+      - name: Stop local stack
+        if: always()
+        run: make local-down

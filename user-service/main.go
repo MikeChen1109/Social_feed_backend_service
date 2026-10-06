@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	monitoring "social-feed/observability"
 	"time"
 	"user-service/controllers"
 	"user-service/initializers"
@@ -44,7 +45,9 @@ func main() {
 		gin.SetMode(gin.DebugMode)
 	}
 	router := gin.New()
-	router.Use(gin.Recovery())
+	metrics := monitoring.New("user-service")
+	router.Use(metrics.Middleware(), gin.Recovery())
+	router.GET("/metrics", metrics.Handler)
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	routes.RegisterUserRoutes(router, userController)

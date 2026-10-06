@@ -51,6 +51,28 @@ curl -X POST http://localhost:2000/api/feed/create \
   -d '{"title":"My first local feed","content":"No domain needed"}'
 ```
 
+### Auto-refreshing API dashboard
+
+Open **[Grafana: Social Feed API Monitoring](http://localhost:3001/d/social-feed-api/social-feed-api-monitoring)** after `make local-up`. It is provisioned automatically and local viewing does not require login. Grafana refreshes every **5 seconds**, and Prometheus scrapes all three services every **5 seconds**.
+
+Select the service matching how you tested:
+
+| Request destination | Dashboard service |
+| --- | --- |
+| Auth Swagger on localhost:4000 | `user-service` (default) |
+| Feed Swagger on localhost:3000 | `feed-service` |
+| Gateway API on localhost:2000/api/... | `api-gateway` |
+
+The dashboard shows per-method/per-route calls, HTTP status counts, request rate, error rate, average response time, and P95 latency. Calls passing through the gateway appear at both the gateway and the destination service; select one service to avoid double counting. Gateway latency includes forwarding overhead; direct service latency is measured inside that service.
+
+- Count panels show totals **since the selected service restarted**, not totals for the time-picker range. Prometheus/Grafana history persists in local named volumes.
+- Allow roughly 5-10 seconds for a new request to appear. Rate/latency-window charts need at least two scrapes and calls inside the selected rate window. With no traffic, these panels can be empty; the counter panels still show recorded calls.
+- P95 is estimated from histogram buckets, not an exact percentile of stored requests. At very low traffic it should be read cautiously.
+- Dynamic IDs use a route template such as `/feed/:id`; query strings and raw IDs are not metric labels. Health probes, metrics scrapes, and Swagger page assets are excluded.
+- Prometheus targets: http://localhost:9090/targets
+- `make monitoring-test` verifies direct API metrics, scrapes, all dashboard queries, and the provisioned dashboard. It leaves one local test account and removes its test feed.
+- Grafana is bound to localhost with anonymous Viewer access for this local demo. Change authentication and network exposure before deploying it publicly.
+
 ### Fast tests without starting Docker
 
 With Go installed:
@@ -91,7 +113,7 @@ Stop the full container stack with `make local-down` before this mode to avoid c
 - A Docker daemon connection error means Docker Desktop needs to be started.
 - Port conflicts: check `make local-status` and other local servers before starting.
 - Startup failures: inspect `make local-logs`; migrations must succeed before the APIs start. Compose uses database health checks and migration completion dependencies ([Docker documentation](https://docs.docker.com/compose/how-tos/startup-order/)).
-- `/healthz` checks the process; `/readyz` checks PostgreSQL/Redis (or both upstream APIs at the gateway). Gateway `/metrics` exports request/error counts and latency histograms; monitoring dashboards are not included.
+- `/healthz` checks the process; `/readyz` checks PostgreSQL/Redis (or both upstream APIs at the gateway). Each service's `/metrics` exports request counts by status and latency histograms; Grafana provides the local API dashboard at localhost:3001.
 - Kubernetes manifests and cloud deployment targets are retained as historical reference and are not required for local tests.
 
 ---
@@ -115,7 +137,7 @@ Browser / API client
 - Redis deployment: the rotation script targets standalone Redis. Redis Cluster requires a hash-slot key design before use. See [Redis atomic scripting documentation](https://redis.io/docs/latest/develop/programmability/eval-intro/).
 - Pagination: offset is `(page - 1) * limit`, metadata preserves the requested page, and ordering uses `created_at DESC, id DESC` to break timestamp ties. Offset pagination can still shift when new records arrive; this project does not claim snapshot pagination.
 - Timeouts: gateway upstream calls have a 10-second deadline and inherit client cancellation; PostgreSQL and Redis operations have independent 5-second budgets. HTTP servers use 5-second header, 15-second read, 30-second write, and 60-second idle timeouts. Repository budgets do not currently inherit HTTP request cancellation.
-- Monitoring: gateway `/metrics` is Prometheus text format with request count, HTTP 4xx/5xx count, and latency histogram. `/healthz` is liveness; `/readyz` checks dependencies with a 2-second budget. Gateway request logs use route templates, status and duration, without headers, bodies, query parameters or credentials. These metrics describe gateway traffic, not direct service requests. Restrict monitoring endpoints before a public deployment.
+- Monitoring: every service exposes `/metrics` in Prometheus text format. Request counters include `service`, `method`, normalized `route`, and `status`; latency histograms include `service`, `method`, and `route`. Grafana error panels aggregate 4xx/5xx counters. `/healthz` is liveness; `/readyz` checks dependencies with a 2-second budget. All three services use the shared observability package and log route templates, status and duration, without headers, bodies, query parameters or credentials. Direct Swagger requests are recorded by the destination service. Restrict monitoring endpoints before a public deployment.
 - Tests: `make test` runs race-enabled tests, including real controller/repository integration via SQLite, non-author rejection, page overlap regression, 20-way Redis rotation (miniredis), upstream timeout/cancellation, and concurrent metric collection. `make local-test` verifies real PostgreSQL/Redis services with an 8-way HTTP refresh race and health/metrics probes.
 
 Useful monitoring URLs:
@@ -205,7 +227,9 @@ The paths below are direct service routes. When using the gateway at `http://loc
 ├── .github/            # GitHub Actions for CI/CD workflows
 ├── .dockerignore       # Docker ignore rules
 ├── compose.local.yml   # Local backend, PostgreSQL, Redis, and migrations
-├── scripts/            # Automated API smoke test
+├── scripts/            # API smoke test and monitoring integration verification
+├── observability/      # Shared Go instrumentation module
+├── monitoring/         # Prometheus config and provisioned Grafana dashboard
 ├── makefile            # Common build, run, and test shortcuts
 ├── README.md           # Project documentation
 
@@ -224,8 +248,8 @@ The paths below are direct service routes. When using the gateway at `http://loc
 * [x] Dockerfile for containerized deployment
 * [x] Kubernetes manifests for local deployment
 * [ ] gRPC support with proto definitions and shared service layer
-* [x] Prometheus-compatible gateway metrics endpoint
-* [ ] Grafana dashboard
+* [x] Per-API Prometheus metrics for gateway, authentication, and feed services
+* [x] Provisioned Grafana dashboard with 5-second auto-refresh
 * [ ] Rate limiting (e.g. IP-based using middleware or Redis)
 * [ ] Database performance tuning (e.g. indexes, query optimization, slow query logging)
 
