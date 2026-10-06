@@ -126,20 +126,20 @@ func TestUpdateFeedSuccess(t *testing.T) {
 	repo := new(mockFeedRepo)
 	svc := &FeedService{FeedRepo: repo}
 
-	old := &models.Feed{AuthorName: "mike", Title: "Old", Content: "Old"}
+	old := &models.Feed{AuthorID: 1, AuthorName: "mike", Title: "Old", Content: "Old"}
 	feedId := uint(1)
 	repo.On("GetFeedByID", feedId).Return(old, nil)
 	repo.On("UpdateFeed", mock.AnythingOfType("*models.Feed")).Return(nil)
 
 	newContent := "new content"
 	newTitle := "new title"
-	err := svc.UpdateFeed(feedId, newTitle, newContent)
+	err := svc.UpdateFeed(feedId, 1, newTitle, newContent)
 	assert.Nil(t, err)
 }
 
 func TestUpdateFeedWhenFieldsEmpty(t *testing.T) {
 	svc := &FeedService{}
-	err := svc.UpdateFeed(1, "", "")
+	err := svc.UpdateFeed(1, 1, "", "")
 
 	assert.Equal(t, appErrors.ErrFeedInvalidContentOrTitle, err)
 }
@@ -147,8 +147,9 @@ func TestUpdateFeedWhenFieldsEmpty(t *testing.T) {
 func TestDeleteFeedSuccess(t *testing.T) {
 	repo := new(mockFeedRepo)
 	svc := &FeedService{FeedRepo: repo}
+	repo.On("GetFeedByID", uint(10)).Return(&models.Feed{AuthorID: 1}, nil)
 	repo.On("DeleteFeed", uint(10)).Return(nil)
 
-	err := svc.DeleteFeed(10)
+	err := svc.DeleteFeed(10, 1)
 	assert.Nil(t, err)
 }

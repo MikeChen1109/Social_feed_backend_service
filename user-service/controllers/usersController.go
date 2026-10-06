@@ -26,8 +26,9 @@ type UsersController struct {
 // @Router       /user/signup [post]
 func (usersController *UsersController) Signup(c *gin.Context) {
 	var req models.SignupRequest
-	if err := c.Bind(&req); err != nil {
+	if err := c.ShouldBindJSON(&req); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
 	}
 
 	err := usersController.AuthService.Signup(req.Username, req.Password)
@@ -53,8 +54,9 @@ func (usersController *UsersController) Signup(c *gin.Context) {
 // @Router       /user/login [post]
 func (usersController *UsersController) Login(c *gin.Context) {
 	var req models.LoginRequest
-	if err := c.Bind(&req); err != nil {
+	if err := c.ShouldBindJSON(&req); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
 	}
 
 	token, refreshToken, err := usersController.AuthService.Login(req.Username, req.Password)
@@ -83,8 +85,9 @@ func (usersController *UsersController) Login(c *gin.Context) {
 // @Router       /user/refresh [post]
 func (usersController *UsersController) Refresh(c *gin.Context) {
 	var req models.RefreshRequest
-	if err := c.Bind(&req); err != nil {
+	if err := c.ShouldBindJSON(&req); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
 	}
 
 	token, refreshToken, err := usersController.AuthService.Refresh(req.RefreshToken)
@@ -112,11 +115,15 @@ func (usersController *UsersController) Refresh(c *gin.Context) {
 // @Router       /user/logout [post]
 func (usersController *UsersController) Logout(c *gin.Context) {
 	var req models.LogoutRequest
-	if err := c.Bind(&req); err != nil {
+	if err := c.ShouldBindJSON(&req); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
 	}
 
-	usersController.AuthService.Logout(req.RefreshToken)
+	if err := usersController.AuthService.Logout(req.RefreshToken); err != nil {
+		errorHandler(c, err)
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{"message": "Logout successfully"})
 }
 

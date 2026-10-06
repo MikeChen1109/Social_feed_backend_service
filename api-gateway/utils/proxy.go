@@ -1,43 +1,54 @@
 package utils
 
 import (
+	"context"
+	"errors"
+	"github.com/gin-gonic/gin"
 	"io"
-	"log"
 	"net/http"
 	"strings"
-
-	"github.com/gin-gonic/gin"
+	"time"
 )
 
+var proxyClient = &http.Client{Timeout: 10 * time.Second}
+
 func ProxyRequest(c *gin.Context, targetBaseURL string) {
-	originalPath := c.Request.URL.Path
+	proxyRequest(c, targetBaseURL, proxyClient)
+}
 
-	path := strings.TrimPrefix(originalPath, "/api")
-
+func proxyRequest(c *gin.Context, targetBaseURL string, client *http.Client) {
+	path := strings.TrimPrefix(c.Request.URL.Path, "/api")
 	targetURL := targetBaseURL + path
 	if c.Request.URL.RawQuery != "" {
 		targetURL += "?" + c.Request.URL.RawQuery
 	}
-
-	req, err := http.NewRequest(c.Request.Method, targetURL, c.Request.Body)
+	req, err := http.NewRequestWithContext(c.Request.Context(), c.Request.Method, targetURL, c.Request.Body)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Request creation failed"})
 		return
 	}
-
-	for k, v := range c.Request.Header {
-		req.Header[k] = v
+	req.Header = c.Request.Header.Clone()
+	// Hop-by-hop headers must not be forwarded to another HTTP connection.
+	for _, name := range strings.Split(req.Header.Get("Connection"), ",") {
+		req.Header.Del(strings.TrimSpace(name))
 	}
-
-	client := &http.Client{}
+	for _, name := range []string{"Connection", "Keep-Alive", "Proxy-Authenticate", "Proxy-Authorization", "TE", "Trailer", "Transfer-Encoding", "Upgrade"} {
+		req.Header.Del(name)
+	}
 	resp, err := client.Do(req)
-	log.Print("Proxying request to: ", targetURL)
 	if err != nil {
-		c.JSON(http.StatusBadGateway, gin.H{"error": "Service unreachable"})
+		status := http.StatusBadGateway
+		if errors.Is(err, context.DeadlineExceeded) {
+			status = http.StatusGatewayTimeout
+		}
+		c.JSON(status, gin.H{"error": "Upstream request failed"})
 		return
 	}
 	defer resp.Body.Close()
-
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"error": "Upstream response incomplete"})
+		return
+	}
 	c.Data(resp.StatusCode, resp.Header.Get("Content-Type"), body)
 }

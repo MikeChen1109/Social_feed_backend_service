@@ -8,10 +8,12 @@ type AppError struct {
 }
 
 var (
-	ErrUserNotFound              = New(http.StatusInternalServerError, "User not found")
-	DatabaseError                = New(http.StatusInternalServerError, "Database error")
-	ErrUserInvalidType           = New(http.StatusInternalServerError, "User type assertion failed")
-	ErrFeedInvalidContentOrTitle = New(http.StatusBadRequest, "Feed content or title cannot be empty")
+	ErrForbidden                    = New(http.StatusForbidden, "Only the author can modify this feed")
+	ErrFeedNotFound                 = New(http.StatusNotFound, "Feed not found")
+	ErrUserNotFound                 = New(http.StatusInternalServerError, "User not found")
+	DatabaseError                   = New(http.StatusInternalServerError, "Database error")
+	ErrUserInvalidType              = New(http.StatusInternalServerError, "User type assertion failed")
+	ErrFeedInvalidContentOrTitle    = New(http.StatusBadRequest, "Feed content or title cannot be empty")
 	ErrCommentIvalidContentOrFeedId = New(http.StatusBadRequest, "Comment content or feedId cannot be empty")
 )
 

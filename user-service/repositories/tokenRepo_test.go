@@ -60,7 +60,7 @@ func setupTokenRepoForTest(t *testing.T) (*TokenRepository, func(), func()) {
 
 func TestStoreRefreshTokenSuccess(t *testing.T) {
 	assert := assert.New(t)
-	repo, dbCleanUp, redisCleanUp  := setupTokenRepoForTest(t)
+	repo, dbCleanUp, redisCleanUp := setupTokenRepoForTest(t)
 	expectedToken := uuid.NewString()
 	expectedUserId := uint(100)
 	defer dbCleanUp()
@@ -77,7 +77,7 @@ func TestStoreRefreshTokenSuccess(t *testing.T) {
 
 func TestGetUserIDByRefreshTokenWhenTokenNotExists(t *testing.T) {
 	assert := assert.New(t)
-	repo, dbCleanUp, redisCleanUp  := setupTokenRepoForTest(t)
+	repo, dbCleanUp, redisCleanUp := setupTokenRepoForTest(t)
 	token := uuid.NewString()
 	userId := uint(100)
 	defer dbCleanUp()
@@ -96,7 +96,7 @@ func TestGetUserIDByRefreshTokenWhenTokenNotExists(t *testing.T) {
 
 func TestDeleteRefreshTokenSuccess(t *testing.T) {
 	assert := assert.New(t)
-	repo, dbCleanUp, redisCleanUp  := setupTokenRepoForTest(t)
+	repo, dbCleanUp, redisCleanUp := setupTokenRepoForTest(t)
 	token := uuid.NewString()
 	userId := uint(100)
 	defer dbCleanUp()
@@ -108,4 +108,55 @@ func TestDeleteRefreshTokenSuccess(t *testing.T) {
 
 	err := repo.DeleteRefreshToken(token)
 	assert.Nil(err)
+}
+
+func TestConcurrentRefreshRotationHasOneWinner(t *testing.T) {
+	repo, dbCleanup, redisCleanup := setupTokenRepoForTest(t)
+	defer dbCleanup()
+	defer redisCleanup()
+	assert.NoError(t, repo.StoreRefreshToken("old", 42, time.Hour))
+	const workers = 20
+	start := make(chan struct{})
+	results := make(chan error, workers)
+	for i := 0; i < workers; i++ {
+		go func() { <-start; results <- repo.RotateRefreshToken("old", uuid.NewString(), 42, time.Hour) }()
+	}
+	close(start)
+	winners := 0
+	for i := 0; i < workers; i++ {
+		err := <-results
+		if err == nil {
+			winners++
+		} else {
+			assert.ErrorIs(t, err, redis.Nil)
+		}
+	}
+	assert.Equal(t, 1, winners)
+	_, err := repo.GetUserIDByRefreshToken("old")
+	assert.ErrorIs(t, err, redis.Nil)
+}
+
+func TestRefreshRotationPreservesOldTokenForWrongUser(t *testing.T) {
+	repo, dbCleanup, redisCleanup := setupTokenRepoForTest(t)
+	defer dbCleanup()
+	defer redisCleanup()
+	assert.NoError(t, repo.StoreRefreshToken("old", 42, time.Hour))
+	assert.ErrorIs(t, repo.RotateRefreshToken("old", "new", 99, time.Hour), redis.Nil)
+	id, err := repo.GetUserIDByRefreshToken("old")
+	assert.NoError(t, err)
+	assert.Equal(t, uint(42), id)
+	_, err = repo.GetUserIDByRefreshToken("new")
+	assert.ErrorIs(t, err, redis.Nil)
+}
+
+func TestFailedReplacementWritePreservesOldToken(t *testing.T) {
+	repo, dbCleanup, redisCleanup := setupTokenRepoForTest(t)
+	defer dbCleanup()
+	defer redisCleanup()
+	assert.NoError(t, repo.StoreRefreshToken("old", 42, time.Hour))
+	// Redis rejects SET PX 0; the script must not delete the old token first.
+	assert.Error(t, repo.RotateRefreshToken("old", "new", 42, 0))
+	id, err := repo.GetUserIDByRefreshToken("old")
+	assert.NoError(t, err)
+	assert.Equal(t, uint(42), id)
 }

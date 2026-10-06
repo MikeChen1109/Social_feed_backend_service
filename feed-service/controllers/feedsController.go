@@ -22,13 +22,16 @@ type FeedsController struct {
 // @Produce      json
 // @Param        body  body  models.CreateFeedRequest  true  "Feed content"
 // @Success      200   {object}  models.FeedResponse
-// @Failure      400   
-// @Failure      401   
-// @Failure      500   
-// @Router       /feed [post]
+// @Failure      400
+// @Failure      401
+// @Failure      403
+// @Failure      404
+// @Failure      500
+// @Security     BearerAuth
+// @Router       /feed/create [post]
 func (s *FeedsController) CreateFeed(c *gin.Context) {
 	var req models.CreateFeedRequest
-	if err := c.Bind(&req); err != nil {
+	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid request body",
 		})
@@ -60,8 +63,8 @@ func (s *FeedsController) CreateFeed(c *gin.Context) {
 // @Tags         Feeds
 // @Produce      json
 // @Success      200   {object}  []models.FeedResponse
-// @Failure      500   
-// @Router       /feed/all [get]
+// @Failure      500
+// @Router       /feed/ [get]
 func (s *FeedsController) GetFeeds(c *gin.Context) {
 	feeds, err := s.FeedsService.GetFeeds()
 	if err != nil {
@@ -81,8 +84,8 @@ func (s *FeedsController) GetFeeds(c *gin.Context) {
 // @Produce      json
 // @Param        page   query     int  false  "Page number"
 // @Param        limit  query     int  false  "Items per page"
-// @Success      200    
-// @Failure      500    
+// @Success      200
+// @Failure      500
 // @Router       /feed/paginated [get]
 func (s *FeedsController) PaginatedFeeds(c *gin.Context) {
 	pageStr := c.DefaultQuery("page", "1")
@@ -98,7 +101,11 @@ func (s *FeedsController) PaginatedFeeds(c *gin.Context) {
 		limit = 10
 	}
 
-	offset := (page - 1)
+	if page-1 > int(^uint(0)>>1)/limit {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Page is too large"})
+		return
+	}
+	offset := (page - 1) * limit
 	response, apperror := s.FeedsService.PaginatedFeeds(offset, limit)
 
 	if apperror != nil {
@@ -118,8 +125,8 @@ func (s *FeedsController) PaginatedFeeds(c *gin.Context) {
 // @Produce      json
 // @Param        id   path      int  true  "Feed ID"
 // @Success      200  {object}  models.FeedResponse
-// @Failure      400  
-// @Failure      404  
+// @Failure      400
+// @Failure      404
 // @Router       /feed/{id} [get]
 func (s *FeedsController) GetFeedByID(c *gin.Context) {
 	id := c.Param("id")
@@ -133,8 +140,8 @@ func (s *FeedsController) GetFeedByID(c *gin.Context) {
 
 	feed, apperror := s.FeedsService.GetFeedByID(uint(feedID))
 	if apperror != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"error": "Feed not found",
+		c.JSON(apperror.StatusCode, gin.H{
+			"error": apperror.Message,
 		})
 		return
 	}
@@ -150,17 +157,28 @@ func (s *FeedsController) GetFeedByID(c *gin.Context) {
 // @Produce      json
 // @Param        id    path      int                       true  "Feed ID"
 // @Param        body  body      models.UpdateFeedRequest  true  "Updated content"
-// @Success      200   
-// @Failure      400   
-// @Failure      500   
+// @Success      200
+// @Failure      400
+// @Failure      403
+// @Failure      404
+// @Failure      500
+// @Security     BearerAuth
 // @Router       /feed/{id} [put]
 func (s *FeedsController) UpdateFeed(c *gin.Context) {
+	claims, claimsErr := helpers.ParseClaims(c)
+	if claimsErr != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
 	var body struct {
 		Title   string
 		Content string
 	}
 
-	c.Bind(&body)
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
 
 	id := c.Param("id")
 	feedID, err := strconv.ParseUint(id, 10, 64)
@@ -171,10 +189,10 @@ func (s *FeedsController) UpdateFeed(c *gin.Context) {
 		return
 	}
 
-	apperror := s.FeedsService.UpdateFeed(uint(feedID), body.Title, body.Content)
+	apperror := s.FeedsService.UpdateFeed(uint(feedID), claims.UserID, body.Title, body.Content)
 	if apperror != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to update feed",
+		c.JSON(apperror.StatusCode, gin.H{
+			"error": apperror.Message,
 		})
 		return
 	}
@@ -190,11 +208,19 @@ func (s *FeedsController) UpdateFeed(c *gin.Context) {
 // @Tags         Feeds
 // @Produce      json
 // @Param        id   path      int  true  "Feed ID"
-// @Success      200  
-// @Failure      400  
-// @Failure      500  
+// @Success      200
+// @Failure      400
+// @Failure      403
+// @Failure      404
+// @Failure      500
+// @Security     BearerAuth
 // @Router       /feed/{id} [delete]
 func (s *FeedsController) DeleteFeed(c *gin.Context) {
+	claims, claimsErr := helpers.ParseClaims(c)
+	if claimsErr != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
 	id := c.Param("id")
 	feedID, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
@@ -204,10 +230,10 @@ func (s *FeedsController) DeleteFeed(c *gin.Context) {
 		return
 	}
 
-	apperror := s.FeedsService.DeleteFeed(uint(feedID))
+	apperror := s.FeedsService.DeleteFeed(uint(feedID), claims.UserID)
 	if apperror != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to delete feed",
+		c.JSON(apperror.StatusCode, gin.H{
+			"error": apperror.Message,
 		})
 		return
 	}

@@ -3,15 +3,17 @@ package main
 import (
 	"feed-service/initializers"
 	"feed-service/models"
+	"log"
 )
 
 func init() {
 	initializers.LoadEnvVariables()
-	initializers.ConnectToDatabase()
 }
 
 func main() {
 	db := initializers.ConnectToDatabase()
 	// db.Migrator().DropTable(&models.Comment{}, &models.Feed{})
-	db.AutoMigrate(&models.Feed{}, &models.Comment{})
+	if err := db.AutoMigrate(&models.Feed{}, &models.Comment{}); err != nil {
+		log.Fatal(err)
+	}
 }

@@ -1,0 +1,98 @@
+name: social-feed-local
+x-app-env: &app-env
+  APP_ENV: local
+  JWT_SECRET: local-development-only-change-for-deployment
+  DB_URL: postgres://social:social_local@postgres:5432/social_feed?sslmode=disable
+  FRONTEND_ORIGIN: http://localhost:5173
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: social
+      POSTGRES_PASSWORD: social_local
+      POSTGRES_DB: social_feed
+    ports: ["127.0.0.1:5433:5432"]
+    volumes: ["postgres-local:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U social -d social_feed"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  redis:
+    image: redis:7-alpine
+    ports: ["127.0.0.1:6380:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  user-migrate:
+    build:
+      context: .
+      dockerfile: docker/development/Dockerfile.user
+    environment: *app-env
+    command: ["go", "run", "./migrate"]
+    depends_on:
+      postgres: {condition: service_healthy}
+  feed-migrate:
+    build:
+      context: .
+      dockerfile: docker/development/Dockerfile.feed
+    environment: *app-env
+    command: ["go", "run", "./migrate"]
+    depends_on:
+      user-migrate: {condition: service_completed_successfully}
+  user-service:
+    build:
+      context: .
+      dockerfile: docker/development/Dockerfile.user
+    environment:
+      <<: *app-env
+      PORT: "4000"
+      REDIS_URL: redis://redis:6379/0
+    ports: ["127.0.0.1:4000:4000"]
+    depends_on:
+      user-migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:4000/readyz"]
+      interval: 3s
+      timeout: 3s
+      retries: 40
+      start_period: 60s
+  feed-service:
+    build:
+      context: .
+      dockerfile: docker/development/Dockerfile.feed
+    environment:
+      <<: *app-env
+      PORT: "3000"
+    ports: ["127.0.0.1:3000:3000"]
+    depends_on:
+      feed-migrate: {condition: service_completed_successfully}
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:3000/readyz"]
+      interval: 3s
+      timeout: 3s
+      retries: 40
+      start_period: 60s
+  api-gateway:
+    build:
+      context: .
+      dockerfile: docker/development/Dockerfile.gateway
+    environment:
+      APP_ENV: local
+      PORT: "2000"
+      FRONTEND_ORIGIN: http://localhost:5173
+    ports: ["127.0.0.1:2000:2000"]
+    depends_on:
+      user-service: {condition: service_healthy}
+      feed-service: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:2000/readyz"]
+      interval: 3s
+      timeout: 3s
+      retries: 40
+      start_period: 60s
+volumes:
+  postgres-local:

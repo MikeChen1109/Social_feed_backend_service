@@ -91,3 +91,21 @@ load_gateway_image:
 	minikube image load baby831109/api-gateway-prod:latest
 
 minikube_load_all_images: load_gateway_image load_feed_image load_user_image
+# Self-contained local environment; no cloud accounts or .env files required.
+LOCAL_COMPOSE = docker compose -f compose.local.yml
+.PHONY: local-up local-down local-logs local-status local-test test
+local-up:
+	$(LOCAL_COMPOSE) up --build -d --wait --wait-timeout 300
+local-down:
+	$(LOCAL_COMPOSE) down
+local-logs:
+	$(LOCAL_COMPOSE) logs -f --tail=100
+local-status:
+	$(LOCAL_COMPOSE) ps -a
+local-test:
+	python3 scripts/smoke.py
+# Unit/repository tests run without Docker, PostgreSQL, Redis, or cloud accounts.
+test:
+	cd user-service && go test -race ./...
+	cd feed-service && go test -race ./...
+	cd api-gateway && go test -race ./...

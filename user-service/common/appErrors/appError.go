@@ -18,7 +18,7 @@ var (
 	ErrUsernameAlreadyExists          = New(http.StatusConflict, "Username already exists")
 	ErrFailedToCreateUser             = New(http.StatusInternalServerError, "Failed to create user")
 	ErrUserInvalidType                = New(http.StatusInternalServerError, "User type assertion failed")
-	ErrRefreshTokenExpiredOrNotExists = New(http.StatusInternalServerError, "Refresh token expired or not exists")
+	ErrRefreshTokenExpiredOrNotExists = New(http.StatusUnauthorized, "Refresh token expired or not exists")
 )
 
 func New(status int, message string) *AppError {

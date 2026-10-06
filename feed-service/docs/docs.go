@@ -15,8 +15,13 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/comment": {
+        "/comment/create": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Authenticated user creates a comment on a feed",
                 "consumes": [
                     "application/json"
@@ -102,8 +107,39 @@ const docTemplate = `{
                 }
             }
         },
-        "/feed": {
+        "/feed/": {
+            "get": {
+                "description": "Retrieve all feeds without pagination",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Feeds"
+                ],
+                "summary": "Get all feeds",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.FeedResponse"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                }
+            }
+        },
+        "/feed/create": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Authenticated user creates a new feed",
                 "consumes": [
                     "application/json"
@@ -139,31 +175,11 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized"
                     },
-                    "500": {
-                        "description": "Internal Server Error"
-                    }
-                }
-            }
-        },
-        "/feed/all": {
-            "get": {
-                "description": "Retrieve all feeds without pagination",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Feeds"
-                ],
-                "summary": "Get all feeds",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/models.FeedResponse"
-                            }
-                        }
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not Found"
                     },
                     "500": {
                         "description": "Internal Server Error"
@@ -240,6 +256,11 @@ const docTemplate = `{
                 }
             },
             "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Update feed content by ID",
                 "consumes": [
                     "application/json"
@@ -276,12 +297,23 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request"
                     },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    },
                     "500": {
                         "description": "Internal Server Error"
                     }
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Delete a feed by ID",
                 "produces": [
                     "application/json"
@@ -305,6 +337,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not Found"
                     },
                     "500": {
                         "description": "Internal Server Error"
@@ -405,16 +443,24 @@ const docTemplate = `{
                 }
             }
         }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "description": "Enter Bearer followed by a space and the access token from login.",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
     }
 }`
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "",
+	Version:          "1.0",
 	Host:             "",
 	BasePath:         "",
 	Schemes:          []string{},
-	Title:            "",
+	Title:            "Social Feed API",
 	Description:      "",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,

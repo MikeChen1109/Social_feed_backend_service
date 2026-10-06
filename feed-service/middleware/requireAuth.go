@@ -23,7 +23,7 @@ func RequireAuth(c *gin.Context) {
 
 	token, err := jwt.ParseWithClaims(tokenStr, &models.Claims{}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(os.Getenv("JWT_SECRET")), nil
-	})
+	}, jwt.WithValidMethods([]string{"HS256"}))
 
 	if err != nil {
 		if errors.Is(err, jwt.ErrTokenExpired) {

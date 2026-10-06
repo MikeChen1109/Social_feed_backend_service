@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
+	"feed-service/middleware"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
-	"feed-service/middleware"
 )
 
 func generateExpiredToken() string {
