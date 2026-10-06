@@ -10,6 +10,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -87,10 +88,11 @@ func (s *AuthService) Signup(username, password string) *appErrors.AppError {
 func (s *AuthService) Refresh(refreshToken string) (string, string, *appErrors.AppError) {
 	userId, err := s.TokenRepo.GetUserIDByRefreshToken(refreshToken)
 	if err != nil {
-		return "", "", appErrors.ErrRefreshTokenExpiredOrNotExists
+		if errors.Is(err, redis.Nil) {
+			return "", "", appErrors.ErrRefreshTokenExpiredOrNotExists
+		}
+		return "", "", appErrors.DatabaseError
 	}
-
-	s.TokenRepo.DeleteRefreshToken(refreshToken)
 
 	user, err := s.UserRepo.FindByID(userId)
 	if err != nil {
@@ -107,8 +109,11 @@ func (s *AuthService) Refresh(refreshToken string) (string, string, *appErrors.A
 
 	newRefreshToken := uuid.NewString()
 	expiration := time.Hour * 24 * 30
-	storeErr := s.TokenRepo.StoreRefreshToken(newRefreshToken, user.ID, expiration)
+	storeErr := s.TokenRepo.RotateRefreshToken(refreshToken, newRefreshToken, user.ID, expiration)
 	if storeErr != nil {
+		if errors.Is(storeErr, redis.Nil) {
+			return "", "", appErrors.ErrRefreshTokenExpiredOrNotExists
+		}
 		return "", "", appErrors.ErrRefreshTokenStoreFailed
 	}
 

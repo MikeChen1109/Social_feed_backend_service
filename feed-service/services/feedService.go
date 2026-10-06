@@ -1,9 +1,11 @@
 package services
 
 import (
+	"errors"
 	appErrors "feed-service/common/appErrors"
 	"feed-service/models"
 	"feed-service/repositories"
+	"gorm.io/gorm"
 )
 
 type FeedService struct {
@@ -57,22 +59,31 @@ func (s *FeedService) PaginatedFeeds(offset int, limit int) (*models.PaginatedFe
 func (s *FeedService) GetFeedByID(id uint) (*models.FeedResponse, *appErrors.AppError) {
 	feed, err := s.FeedRepo.GetFeedByID(id)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, appErrors.ErrFeedNotFound
+		}
 		return nil, appErrors.DatabaseError
 	}
 
 	return feed.ToFeedResponse(), nil
 }
 
-func (s *FeedService) UpdateFeed(id uint, title string, content string) *appErrors.AppError {
+func (s *FeedService) UpdateFeed(id uint, userID uint, title string, content string) *appErrors.AppError {
 	if title == "" || content == "" {
 		return appErrors.ErrFeedInvalidContentOrTitle
 	}
 
 	feed, err := s.FeedRepo.GetFeedByID(id)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return appErrors.ErrFeedNotFound
+		}
 		return appErrors.DatabaseError
 	}
 
+	if feed.AuthorID != userID {
+		return appErrors.ErrForbidden
+	}
 	feed.Title = title
 	feed.Content = content
 	err = s.FeedRepo.UpdateFeed(feed)
@@ -83,8 +94,18 @@ func (s *FeedService) UpdateFeed(id uint, title string, content string) *appErro
 	return nil
 }
 
-func (s *FeedService) DeleteFeed(id uint) *appErrors.AppError {
-	err := s.FeedRepo.DeleteFeed(id)
+func (s *FeedService) DeleteFeed(id uint, userID uint) *appErrors.AppError {
+	feed, err := s.FeedRepo.GetFeedByID(id)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return appErrors.ErrFeedNotFound
+		}
+		return appErrors.DatabaseError
+	}
+	if feed.AuthorID != userID {
+		return appErrors.ErrForbidden
+	}
+	err = s.FeedRepo.DeleteFeed(id)
 	if err != nil {
 		return appErrors.DatabaseError
 	}

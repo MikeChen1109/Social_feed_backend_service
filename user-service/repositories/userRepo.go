@@ -1,7 +1,9 @@
 package repositories
 
 import (
+	"context"
 	"errors"
+	"time"
 	apperrors "user-service/common/appErrors"
 	"user-service/models"
 
@@ -19,8 +21,11 @@ type UserRepository struct {
 }
 
 func (r *UserRepository) FindByUsername(username string) (*models.User, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	db := r.DB.WithContext(ctx)
 	var user models.User
-	if err := r.DB.Where("username = ?", username).First(&user).Error; err != nil {
+	if err := db.Where("username = ?", username).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, apperrors.ErrUserNotFound
 		}
@@ -30,15 +35,21 @@ func (r *UserRepository) FindByUsername(username string) (*models.User, error) {
 }
 
 func (r *UserRepository) Create(user *models.User) error {
-	if err := r.DB.Create(user).Error; err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	db := r.DB.WithContext(ctx)
+	if err := db.Create(user).Error; err != nil {
 		return err
 	}
 	return nil
 }
 
 func (r *UserRepository) FindByID(id uint) (*models.User, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	db := r.DB.WithContext(ctx)
 	var user models.User
-	if err := r.DB.First(&user, id).Error; err != nil {
+	if err := db.First(&user, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, apperrors.ErrUserNotFound
 		}

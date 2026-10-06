@@ -22,10 +22,11 @@ type CommentsController struct {
 // @Produce      json
 // @Param        body  body  models.CreateCommentRequest  true  "Comment content"
 // @Success      200   {object}  models.CommentResponse
-// @Failure      400   
-// @Failure      401   
-// @Failure      500   
-// @Router       /comment [post]
+// @Failure      400
+// @Failure      401
+// @Failure      500
+// @Security     BearerAuth
+// @Router       /comment/create [post]
 func (s *CommentsController) CreateComment(c *gin.Context) {
 	var req models.CreateCommentRequest
 
@@ -63,9 +64,9 @@ func (s *CommentsController) CreateComment(c *gin.Context) {
 // @Param        id     query     int  true   "Feed ID"
 // @Param        page   query     int  false  "Page number"
 // @Param        limit  query     int  false  "Items per page"
-// @Success      200    
-// @Failure      400    
-// @Failure      500    
+// @Success      200
+// @Failure      400
+// @Failure      500
 // @Router       /comment/paginated [get]
 func (s *CommentsController) PaginatedComments(c *gin.Context) {
 	pageStr := c.DefaultQuery("page", "1")
@@ -73,8 +74,9 @@ func (s *CommentsController) PaginatedComments(c *gin.Context) {
 	feedIdStr := c.DefaultQuery("id", "0")
 
 	feedID, err := strconv.Atoi(feedIdStr)
-	if err != nil {
+	if err != nil || feedID < 1 {
 		c.AbortWithStatus(http.StatusBadRequest)
+		return
 	}
 
 	page, err := strconv.Atoi(pageStr)
@@ -87,7 +89,11 @@ func (s *CommentsController) PaginatedComments(c *gin.Context) {
 		limit = 10
 	}
 
-	offset := (page - 1)
+	if page-1 > int(^uint(0)>>1)/limit {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Page is too large"})
+		return
+	}
+	offset := (page - 1) * limit
 	response, apperror := s.CommentsService.PaginatedComments(offset, limit, uint(feedID))
 
 	if apperror != nil {

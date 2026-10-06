@@ -46,6 +46,10 @@ func (m *mockTokenRepo) DeleteRefreshToken(token string) error {
 	args := m.Called(token)
 	return args.Error(0)
 }
+func (m *mockTokenRepo) RotateRefreshToken(oldToken, newToken string, uid uint, exp time.Duration) error {
+	args := m.Called(oldToken, newToken, uid, exp)
+	return args.Error(0)
+}
 func (m *mockTokenRepo) WithContext(_ context.Context) repositories.TokenRepositoryInterface {
 	return m
 }
@@ -114,7 +118,6 @@ func TestLoginWhenInvalidUsernameOrPassword(t *testing.T) {
 	assert.Equal(t, appErrors.ErrInvalidUsernameOrPassword, appErr)
 }
 
-
 func TestLoginWhenUserNotExist(t *testing.T) {
 	userRepo := new(mockUserRepo)
 	tokenRepo := new(mockTokenRepo)
@@ -175,9 +178,8 @@ func TestRefreshSuccess(t *testing.T) {
 	u.ID = userId
 
 	tokenRepo.On("GetUserIDByRefreshToken", oldRefresh).Return(userId, nil)
-	tokenRepo.On("DeleteRefreshToken", oldRefresh).Return(nil)
 	userRepo.On("FindByID", userId).Return(u, nil)
-	tokenRepo.On("StoreRefreshToken", newRefreshMatcher, userId, mock.Anything).Return(nil)
+	tokenRepo.On("RotateRefreshToken", oldRefresh, newRefreshMatcher, userId, mock.Anything).Return(nil)
 
 	access, newRefresh, err := svc.Refresh(oldRefresh)
 
@@ -193,12 +195,11 @@ func TestRefreshWhenUserNotExist(t *testing.T) {
 	userRepo := new(mockUserRepo)
 	tokenRepo := new(mockTokenRepo)
 	svc := &AuthService{UserRepo: userRepo, TokenRepo: tokenRepo}
-	
+
 	oldRefresh := "old-refresh"
 	userId := uint(2)
 
 	tokenRepo.On("GetUserIDByRefreshToken", oldRefresh).Return(userId, nil)
-	tokenRepo.On("DeleteRefreshToken", oldRefresh).Return(nil)
 	userRepo.On("FindByID", userId).Return((*models.User)(nil), appErrors.ErrUserNotFound)
 
 	access, newRefresh, err := svc.Refresh(oldRefresh)

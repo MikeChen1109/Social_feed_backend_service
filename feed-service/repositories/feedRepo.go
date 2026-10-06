@@ -1,7 +1,9 @@
 package repositories
 
 import (
+	"context"
 	"feed-service/models"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -20,23 +22,32 @@ type FeedRepository struct {
 }
 
 func (r *FeedRepository) CreateFeed(feed *models.Feed) error {
-	if err := r.DB.Create(feed).Error; err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	db := r.DB.WithContext(ctx)
+	if err := db.Create(feed).Error; err != nil {
 		return err
 	}
 	return nil
 }
 
 func (r *FeedRepository) GetFeeds() ([]models.Feed, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	db := r.DB.WithContext(ctx)
 	var feeds []models.Feed
-	if err := r.DB.Find(&feeds).Error; err != nil {
+	if err := db.Find(&feeds).Error; err != nil {
 		return nil, err
 	}
 	return feeds, nil
 }
 
 func (r *FeedRepository) PaginatedFeeds(offset int, limit int) (*models.PaginatedFeedsResponse, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	db := r.DB.WithContext(ctx)
 	var feeds []models.Feed
-	err := r.DB.Offset(offset).Limit(limit + 1).Order("created_at DESC").Find(&feeds).Error
+	err := db.Offset(offset).Limit(limit + 1).Order("created_at DESC, id DESC").Find(&feeds).Error
 	if err != nil {
 		return nil, err
 	}
@@ -47,32 +58,41 @@ func (r *FeedRepository) PaginatedFeeds(offset int, limit int) (*models.Paginate
 		feeds = feeds[:limit] // 只取回前 limit 筆
 	}
 
-	var meta = models.Meta{HasMore: hasMore, Page: offset + 1, Limit: limit}
+	var meta = models.Meta{HasMore: hasMore, Page: offset/limit + 1, Limit: limit}
 	var response = models.PaginatedFeedsResponse{Data: feeds, Meta: meta}
 	return &response, nil
 }
 
 func (r *FeedRepository) GetFeedByID(id uint) (*models.Feed, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	db := r.DB.WithContext(ctx)
 	var feed models.Feed
-	if err := r.DB.First(&feed, id).Error; err != nil {
+	if err := db.First(&feed, id).Error; err != nil {
 		return nil, err
 	}
 	return &feed, nil
 }
 
 func (r *FeedRepository) UpdateFeed(feed *models.Feed) error {
-	if err := r.DB.Save(feed).Error; err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	db := r.DB.WithContext(ctx)
+	if err := db.Save(feed).Error; err != nil {
 		return err
 	}
 	return nil
 }
 
 func (r *FeedRepository) DeleteFeed(id uint) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	db := r.DB.WithContext(ctx)
 	var feed models.Feed
-	if err := r.DB.First(&feed, id).Error; err != nil {
+	if err := db.First(&feed, id).Error; err != nil {
 		return err
 	}
-	if err := r.DB.Delete(&feed).Error; err != nil {
+	if err := db.Delete(&feed).Error; err != nil {
 		return err
 	}
 	return nil
