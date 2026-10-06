@@ -9,6 +9,23 @@ import (
 	"gorm.io/gorm"
 )
 
+// Keep the replacement write before deletion: if SET fails, the old token remains.
+var rotateRefreshTokenScript = redis.NewScript(`
+local oldTokenKey = KEYS[1]
+local newTokenKey = KEYS[2]
+local expectedUserID = ARGV[1]
+local ttlMilliseconds = ARGV[2]
+
+local storedUserID = redis.call('GET', oldTokenKey)
+if storedUserID ~= expectedUserID then
+    return 0
+end
+
+redis.call('SET', newTokenKey, expectedUserID, 'PX', ttlMilliseconds)
+redis.call('DEL', oldTokenKey)
+return 1
+`)
+
 type TokenRepositoryInterface interface {
 	StoreRefreshToken(token string, userID uint, expiration time.Duration) error
 	GetUserIDByRefreshToken(token string) (uint, error)
@@ -58,12 +75,10 @@ func (r *TokenRepository) DeleteRefreshToken(token string) error {
 func (r *TokenRepository) RotateRefreshToken(oldToken, newToken string, userID uint, expiration time.Duration) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	script := redis.NewScript(`
- if redis.call('GET', KEYS[1]) ~= ARGV[1] then return 0 end
- redis.call('SET', KEYS[2], ARGV[1], 'PX', ARGV[2])
- redis.call('DEL', KEYS[1])
- return 1`)
-	result, err := script.Run(ctx, r.Redis, []string{"refresh:" + oldToken, "refresh:" + newToken}, userID, expiration.Milliseconds()).Int()
+	keys := []string{"refresh:" + oldToken, "refresh:" + newToken}
+	result, err := rotateRefreshTokenScript.Run(
+		ctx, r.Redis, keys, userID, expiration.Milliseconds(),
+	).Int()
 	if err != nil {
 		return err
 	}
