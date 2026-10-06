@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"errors"
 	"os"
 	"time"
@@ -9,8 +10,8 @@ import (
 	"user-service/repositories"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/gomodule/redigo/redis"
 	"github.com/google/uuid"
-	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -19,12 +20,12 @@ type AuthService struct {
 	TokenRepo repositories.TokenRepositoryInterface
 }
 
-func (s *AuthService) Login(username, password string) (string, string, *appErrors.AppError) {
+func (s *AuthService) Login(ctx context.Context, username, password string) (string, string, *appErrors.AppError) {
 	if username == "" || password == "" {
 		return "", "", appErrors.ErrInvalidUsernameOrPassword
 	}
 
-	user, err := s.UserRepo.FindByUsername(username)
+	user, err := s.UserRepo.FindByUsername(ctx, username)
 	if err != nil {
 		if errors.Is(err, appErrors.ErrUserNotFound) {
 			return "", "", appErrors.ErrUserNotFound
@@ -44,7 +45,7 @@ func (s *AuthService) Login(username, password string) (string, string, *appErro
 
 	refreshToken := uuid.NewString()
 	expiration := time.Hour * 24 * 30
-	storeErr := s.TokenRepo.StoreRefreshToken(refreshToken, user.ID, expiration)
+	storeErr := s.TokenRepo.StoreRefreshToken(ctx, refreshToken, user.ID, expiration)
 	if storeErr != nil {
 		return "", "", appErrors.ErrRefreshTokenStoreFailed
 	}
@@ -52,7 +53,7 @@ func (s *AuthService) Login(username, password string) (string, string, *appErro
 	return token, refreshToken, nil
 }
 
-func (s *AuthService) Signup(username, password string) *appErrors.AppError {
+func (s *AuthService) Signup(ctx context.Context, username, password string) *appErrors.AppError {
 	if username == "" || password == "" {
 		return appErrors.ErrInvalidUsernameOrPassword
 	}
@@ -68,7 +69,7 @@ func (s *AuthService) Signup(username, password string) *appErrors.AppError {
 		Password: string(hash),
 	}
 
-	existingUser, err := s.UserRepo.FindByUsername(username)
+	existingUser, err := s.UserRepo.FindByUsername(ctx, username)
 
 	if err != nil && !errors.Is(err, appErrors.ErrUserNotFound) {
 		return appErrors.DatabaseError
@@ -78,23 +79,23 @@ func (s *AuthService) Signup(username, password string) *appErrors.AppError {
 		return appErrors.ErrUsernameAlreadyExists
 	}
 
-	if s.UserRepo.Create(&user) != nil {
+	if s.UserRepo.Create(ctx, &user) != nil {
 		return appErrors.ErrFailedToCreateUser
 	}
 
 	return nil
 }
 
-func (s *AuthService) Refresh(refreshToken string) (string, string, *appErrors.AppError) {
-	userId, err := s.TokenRepo.GetUserIDByRefreshToken(refreshToken)
+func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (string, string, *appErrors.AppError) {
+	userId, err := s.TokenRepo.GetUserIDByRefreshToken(ctx, refreshToken)
 	if err != nil {
-		if errors.Is(err, redis.Nil) {
+		if errors.Is(err, redis.ErrNil) {
 			return "", "", appErrors.ErrRefreshTokenExpiredOrNotExists
 		}
 		return "", "", appErrors.DatabaseError
 	}
 
-	user, err := s.UserRepo.FindByID(userId)
+	user, err := s.UserRepo.FindByID(ctx, userId)
 	if err != nil {
 		if errors.Is(err, appErrors.ErrUserNotFound) {
 			return "", "", appErrors.ErrUserNotFound
@@ -109,9 +110,9 @@ func (s *AuthService) Refresh(refreshToken string) (string, string, *appErrors.A
 
 	newRefreshToken := uuid.NewString()
 	expiration := time.Hour * 24 * 30
-	storeErr := s.TokenRepo.RotateRefreshToken(refreshToken, newRefreshToken, user.ID, expiration)
+	storeErr := s.TokenRepo.RotateRefreshToken(ctx, refreshToken, newRefreshToken, user.ID, expiration)
 	if storeErr != nil {
-		if errors.Is(storeErr, redis.Nil) {
+		if errors.Is(storeErr, redis.ErrNil) {
 			return "", "", appErrors.ErrRefreshTokenExpiredOrNotExists
 		}
 		return "", "", appErrors.ErrRefreshTokenStoreFailed
@@ -120,8 +121,8 @@ func (s *AuthService) Refresh(refreshToken string) (string, string, *appErrors.A
 	return token, newRefreshToken, nil
 }
 
-func (s *AuthService) Logout(refreshToken string) error {
-	return s.TokenRepo.DeleteRefreshToken(refreshToken)
+func (s *AuthService) Logout(ctx context.Context, refreshToken string) error {
+	return s.TokenRepo.DeleteRefreshToken(ctx, refreshToken)
 }
 
 func generateJWT(user *models.User) (string, error) {

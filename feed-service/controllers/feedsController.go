@@ -46,7 +46,7 @@ func (s *FeedsController) CreateFeed(c *gin.Context) {
 		return
 	}
 
-	response, apperror := s.FeedsService.CreateFeed(req.Title, req.Content, claimsModel.UserID, claimsModel.Username)
+	response, apperror := s.FeedsService.CreateFeed(c.Request.Context(), req.Title, req.Content, claimsModel.UserID, claimsModel.Username)
 	if apperror != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to create feed",
@@ -66,7 +66,7 @@ func (s *FeedsController) CreateFeed(c *gin.Context) {
 // @Failure      500
 // @Router       /feed/ [get]
 func (s *FeedsController) GetFeeds(c *gin.Context) {
-	feeds, err := s.FeedsService.GetFeeds()
+	feeds, err := s.FeedsService.GetFeeds(c.Request.Context())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to retrieve feeds: " + err.Message,
@@ -82,31 +82,20 @@ func (s *FeedsController) GetFeeds(c *gin.Context) {
 // @Description  Retrieve feeds with pagination parameters
 // @Tags         Feeds
 // @Produce      json
-// @Param        page   query     int  false  "Page number"
+// @Param        cursor query string false "Opaque nextCursor from the previous response"
 // @Param        limit  query     int  false  "Items per page"
-// @Success      200
+// @Success      200 {object} models.PaginatedFeedsResponse
+// @Failure      400
 // @Failure      500
 // @Router       /feed/paginated [get]
 func (s *FeedsController) PaginatedFeeds(c *gin.Context) {
-	pageStr := c.DefaultQuery("page", "1")
-	limitStr := c.DefaultQuery("limit", "10")
-
-	page, err := strconv.Atoi(pageStr)
-	if err != nil || page < 1 {
-		page = 1
-	}
-
-	limit, err := strconv.Atoi(limitStr)
-	if err != nil || limit < 1 || limit > 100 {
-		limit = 10
-	}
-
-	if page-1 > int(^uint(0)>>1)/limit {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Page is too large"})
+	cursor, limit, err := models.ParsePagination(c.Request.URL.Query(), "feeds")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	offset := (page - 1) * limit
-	response, apperror := s.FeedsService.PaginatedFeeds(offset, limit)
+
+	response, apperror := s.FeedsService.PaginatedFeeds(c.Request.Context(), cursor, limit)
 
 	if apperror != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -138,7 +127,7 @@ func (s *FeedsController) GetFeedByID(c *gin.Context) {
 		return
 	}
 
-	feed, apperror := s.FeedsService.GetFeedByID(uint(feedID))
+	feed, apperror := s.FeedsService.GetFeedByID(c.Request.Context(), uint(feedID))
 	if apperror != nil {
 		c.JSON(apperror.StatusCode, gin.H{
 			"error": apperror.Message,
@@ -189,7 +178,7 @@ func (s *FeedsController) UpdateFeed(c *gin.Context) {
 		return
 	}
 
-	apperror := s.FeedsService.UpdateFeed(uint(feedID), claims.UserID, body.Title, body.Content)
+	apperror := s.FeedsService.UpdateFeed(c.Request.Context(), uint(feedID), claims.UserID, body.Title, body.Content)
 	if apperror != nil {
 		c.JSON(apperror.StatusCode, gin.H{
 			"error": apperror.Message,
@@ -230,7 +219,7 @@ func (s *FeedsController) DeleteFeed(c *gin.Context) {
 		return
 	}
 
-	apperror := s.FeedsService.DeleteFeed(uint(feedID), claims.UserID)
+	apperror := s.FeedsService.DeleteFeed(c.Request.Context(), uint(feedID), claims.UserID)
 	if apperror != nil {
 		c.JSON(apperror.StatusCode, gin.H{
 			"error": apperror.Message,

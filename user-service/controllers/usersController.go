@@ -31,7 +31,7 @@ func (usersController *UsersController) Signup(c *gin.Context) {
 		return
 	}
 
-	err := usersController.AuthService.Signup(req.Username, req.Password)
+	err := usersController.AuthService.Signup(c.Request.Context(), req.Username, req.Password)
 	if err != nil {
 		errorHandler(c, err)
 		return
@@ -59,7 +59,7 @@ func (usersController *UsersController) Login(c *gin.Context) {
 		return
 	}
 
-	token, refreshToken, err := usersController.AuthService.Login(req.Username, req.Password)
+	token, refreshToken, err := usersController.AuthService.Login(c.Request.Context(), req.Username, req.Password)
 	if err != nil {
 		errorHandler(c, err)
 		return
@@ -90,7 +90,7 @@ func (usersController *UsersController) Refresh(c *gin.Context) {
 		return
 	}
 
-	token, refreshToken, err := usersController.AuthService.Refresh(req.RefreshToken)
+	token, refreshToken, err := usersController.AuthService.Refresh(c.Request.Context(), req.RefreshToken)
 	if err != nil {
 		errorHandler(c, err)
 		return
@@ -120,7 +120,7 @@ func (usersController *UsersController) Logout(c *gin.Context) {
 		return
 	}
 
-	if err := usersController.AuthService.Logout(req.RefreshToken); err != nil {
+	if err := usersController.AuthService.Logout(c.Request.Context(), req.RefreshToken); err != nil {
 		errorHandler(c, err)
 		return
 	}

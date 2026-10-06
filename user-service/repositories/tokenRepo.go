@@ -2,15 +2,14 @@ package repositories
 
 import (
 	"context"
-	"strconv"
 	"time"
 
-	"github.com/redis/go-redis/v9"
+	"github.com/gomodule/redigo/redis"
 	"gorm.io/gorm"
 )
 
 // Keep the replacement write before deletion: if SET fails, the old token remains.
-var rotateRefreshTokenScript = redis.NewScript(`
+var rotateRefreshTokenScript = redis.NewScript(2, `
 local oldTokenKey = KEYS[1]
 local newTokenKey = KEYS[2]
 local expectedUserID = ARGV[1]
@@ -27,63 +26,67 @@ return 1
 `)
 
 type TokenRepositoryInterface interface {
-	StoreRefreshToken(token string, userID uint, expiration time.Duration) error
-	GetUserIDByRefreshToken(token string) (uint, error)
-	DeleteRefreshToken(token string) error
-	RotateRefreshToken(oldToken, newToken string, userID uint, expiration time.Duration) error
+	StoreRefreshToken(ctx context.Context, token string, userID uint, expiration time.Duration) error
+	GetUserIDByRefreshToken(ctx context.Context, token string) (uint, error)
+	DeleteRefreshToken(ctx context.Context, token string) error
+	RotateRefreshToken(ctx context.Context, oldToken, newToken string, userID uint, expiration time.Duration) error
 }
 
 type TokenRepository struct {
 	DB    *gorm.DB
-	Redis *redis.Client
+	Redis *redis.Pool
 }
 
-func (r *TokenRepository) StoreRefreshToken(token string, userID uint, expiration time.Duration) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func (r *TokenRepository) StoreRefreshToken(ctx context.Context, token string, userID uint, expiration time.Duration) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	err := r.Redis.Set(ctx, "refresh:"+token, userID, expiration).Err()
+	conn, err := r.Redis.GetContext(ctx)
 	if err != nil {
 		return err
 	}
-	return nil
+	defer conn.Close()
+	_, err = redis.DoContext(conn, ctx, "SET", "refresh:"+token, userID, "PX", expiration.Milliseconds())
+	return err
 }
-
-func (r *TokenRepository) GetUserIDByRefreshToken(token string) (uint, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func (r *TokenRepository) GetUserIDByRefreshToken(ctx context.Context, token string) (uint, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	key := "refresh:" + token
-	val, err := r.Redis.Get(ctx, key).Result()
+	conn, err := r.Redis.GetContext(ctx)
 	if err != nil {
 		return 0, err
 	}
-	id, err := strconv.Atoi(val)
-	if err != nil {
-		return 0, err
-	}
-	return uint(id), nil
+	defer conn.Close()
+	id, err := redis.Uint64(redis.DoContext(conn, ctx, "GET", "refresh:"+token))
+	return uint(id), err
 }
-
-func (r *TokenRepository) DeleteRefreshToken(token string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func (r *TokenRepository) DeleteRefreshToken(ctx context.Context, token string) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	key := "refresh:" + token
-	return r.Redis.Del(ctx, key).Err()
+	conn, err := r.Redis.GetContext(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	_, err = redis.DoContext(conn, ctx, "DEL", "refresh:"+token)
+	return err
 }
 
 // The check, replacement write, and old-token deletion run as one Redis operation.
 // Standalone Redis is required; these keys do not use a Redis Cluster hash tag.
-func (r *TokenRepository) RotateRefreshToken(oldToken, newToken string, userID uint, expiration time.Duration) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func (r *TokenRepository) RotateRefreshToken(ctx context.Context, oldToken, newToken string, userID uint, expiration time.Duration) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	keys := []string{"refresh:" + oldToken, "refresh:" + newToken}
-	result, err := rotateRefreshTokenScript.Run(
-		ctx, r.Redis, keys, userID, expiration.Milliseconds(),
-	).Int()
+	conn, err := r.Redis.GetContext(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	result, err := redis.Int(rotateRefreshTokenScript.DoContext(ctx, conn, "refresh:"+oldToken, "refresh:"+newToken, userID, expiration.Milliseconds()))
 	if err != nil {
 		return err
 	}
 	if result != 1 {
-		return redis.Nil
+		return redis.ErrNil
 	}
 	return nil
 }

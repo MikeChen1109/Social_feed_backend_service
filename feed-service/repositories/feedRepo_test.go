@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"context"
 	"feed-service/models"
 	"testing"
 
@@ -56,7 +57,7 @@ func TestCreateFeedSuccess(t *testing.T) {
 	defer dbCleanUp()
 
 	feed := models.Feed{AuthorName: "name", AuthorID: 1, Title: "title", Content: "content"}
-	err := repo.CreateFeed(&feed)
+	err := repo.CreateFeed(context.Background(), &feed)
 
 	assert.Nil(t, err)
 }
@@ -66,10 +67,10 @@ func TestGetFeedsSuccess(t *testing.T) {
 	defer dbCleanUp()
 
 	feed := models.Feed{AuthorName: "name", AuthorID: 1, Title: "title", Content: "content"}
-	err := repo.CreateFeed(&feed)
+	err := repo.CreateFeed(context.Background(), &feed)
 	assert.Nil(t, err)
 
-	feeds, err := repo.GetFeeds()
+	feeds, err := repo.GetFeeds(context.Background())
 	assert.Nil(t, err)
 	assert.Equal(t, len(feeds), 1)
 }
@@ -78,15 +79,15 @@ func TestPaginatedFeedsSuccess(t *testing.T) {
 	repo, dbCleanUp := setupFeedRepoForTest()
 	defer dbCleanUp()
 
-	offset := 0
+	var cursor *models.Cursor
 	limit := 10
 	generateFeeds(repo.DB)
-	response, err := repo.PaginatedFeeds(offset, limit)
+	response, err := repo.PaginatedFeeds(context.Background(), cursor, limit)
 
 	assert.Nil(t, err)
 	assert.Equal(t, 10, len(response.Data))
 	assert.Equal(t, true, response.Meta.HasMore)
-	assert.Equal(t, 1, response.Meta.Page)
+	assert.NotEmpty(t, response.Meta.NextCursor)
 }
 
 func TestGetFeedByIDSuccess(t *testing.T) {
@@ -97,9 +98,9 @@ func TestGetFeedByIDSuccess(t *testing.T) {
 	feedId := uint(99)
 	mockFeed.ID = uint(feedId)
 
-	assert.Nil(t, repo.CreateFeed(&mockFeed))
+	assert.Nil(t, repo.CreateFeed(context.Background(), &mockFeed))
 
-	feed, err := repo.GetFeedByID(feedId)
+	feed, err := repo.GetFeedByID(context.Background(), feedId)
 	assert.Nil(t, err)
 	assert.Equal(t, feedId, feed.ID)
 	assert.Equal(t, mockFeed.AuthorName, feed.AuthorName)
@@ -114,17 +115,17 @@ func TestUpdateFeedSuccess(t *testing.T) {
 	feedId := uint(99)
 	mockFeed.ID = uint(feedId)
 
-	assert.Nil(t, repo.CreateFeed(&mockFeed))
+	assert.Nil(t, repo.CreateFeed(context.Background(), &mockFeed))
 
 	updatedContent := "new content"
 	updatedTitle := "new title"
 	mockFeed.Content = updatedContent
 	mockFeed.Title = updatedTitle
 
-	err := repo.UpdateFeed(&mockFeed)
+	err := repo.UpdateFeed(context.Background(), &mockFeed)
 	assert.Nil(t, err)
 
-	updatedFeed, err := repo.GetFeedByID(mockFeed.ID)
+	updatedFeed, err := repo.GetFeedByID(context.Background(), mockFeed.ID)
 	assert.Nil(t, err)
 
 	assert.Equal(t, feedId, mockFeed.ID)
@@ -142,8 +143,8 @@ func TestDeleteFeedSuccess(t *testing.T) {
 	feedId := uint(99)
 	mockFeed.ID = uint(feedId)
 
-	assert.Nil(t, repo.CreateFeed(&mockFeed))
+	assert.Nil(t, repo.CreateFeed(context.Background(), &mockFeed))
 
-	err := repo.DeleteFeed(mockFeed.ID)
+	err := repo.DeleteFeed(context.Background(), mockFeed.ID)
 	assert.Nil(t, err)
 }

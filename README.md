@@ -135,10 +135,10 @@ Browser / API client
 - Authentication: bcrypt passwords, 15-minute HS256 access tokens, and Redis refresh tokens. PUT/DELETE feed operations require the authenticated user to be the author (403 otherwise).
 - Refresh rotation: read the token's user, load the user and generate replacement tokens, then atomically check/write/delete using a Redis Lua script. Concurrent reuse has one winner; losers receive 401. A failure before rotation leaves the old token available; a lost HTTP response after successful rotation requires login again. Logout revokes the refresh token; an existing access token remains valid until its 15-minute expiry.
 - Redis deployment: the rotation script targets standalone Redis. Redis Cluster requires a hash-slot key design before use. See [Redis atomic scripting documentation](https://redis.io/docs/latest/develop/programmability/eval-intro/).
-- Pagination: offset is `(page - 1) * limit`, metadata preserves the requested page, and ordering uses `created_at DESC, id DESC` to break timestamp ties. Offset pagination can still shift when new records arrive; this project does not claim snapshot pagination.
-- Timeouts: gateway upstream calls have a 10-second deadline and inherit client cancellation; PostgreSQL and Redis operations have independent 5-second budgets. HTTP servers use 5-second header, 15-second read, 30-second write, and 60-second idle timeouts. Repository budgets do not currently inherit HTTP request cancellation.
+- Pagination: feeds and comments use keyset cursors in `created_at DESC, id DESC` order. A continuation reads rows strictly below the previous last timestamp/ID, so insertions at the front and deletion of already-read rows cannot shift the next page. Cursors are scoped to feeds or one comment feed. PostgreSQL partial indexes support these lookups. This is not a database snapshot: unread deleted rows disappear; backdated inserts can appear later; changing sort keys externally is unsupported.
+- Timeouts: gateway upstream calls have a 10-second deadline and inherit client cancellation; PostgreSQL and Redis operations derive 5-second budgets from the HTTP request context, retaining its cancellation, values, and any earlier deadline. HTTP servers use 5-second header, 15-second read, 30-second write, and 60-second idle timeouts. Redis uses pooled Redigo `DoContext` operations so cancellation closes blocked connections instead of only changing a deadline. A canceled request cannot undo an already-executed write/commit; retrying mutations must account for that uncertainty.
 - Monitoring: every service exposes `/metrics` in Prometheus text format. Request counters include `service`, `method`, normalized `route`, and `status`; latency histograms include `service`, `method`, and `route`. Grafana error panels aggregate 4xx/5xx counters. `/healthz` is liveness; `/readyz` checks dependencies with a 2-second budget. All three services use the shared observability package and log route templates, status and duration, without headers, bodies, query parameters or credentials. Direct Swagger requests are recorded by the destination service. Restrict monitoring endpoints before a public deployment.
-- Tests: `make test` runs race-enabled tests, including real controller/repository integration via SQLite, non-author rejection, page overlap regression, 20-way Redis rotation (miniredis), upstream timeout/cancellation, and concurrent metric collection. `make local-test` verifies real PostgreSQL/Redis services with an 8-way HTTP refresh race and health/metrics probes.
+- Tests: `make test` runs race-enabled tests, including real controller/repository integration via SQLite, non-author rejection, cursor regression under insert/delete and tied timestamps, 20-way Redis rotation (miniredis), upstream timeout/cancellation, and concurrent metric collection. `make local-test` verifies real PostgreSQL/Redis services with an 8-way HTTP refresh race and health/metrics probes.
 
 Useful monitoring URLs:
 
@@ -201,17 +201,37 @@ The paths below are direct service routes. When using the gateway at `http://loc
 | ------ | ----------------- | ------------------------------------------------- |
 | POST   | /feed/create      | Create a new feed                                 |
 | GET    | /feed/            | Get all feeds                                     |
-| GET    | /feed/paginated   | Get paginated feeds (with page and limit query)   |
+| GET    | /feed/paginated   | Get feeds using cursor and limit   |
 | GET    | /feed/\:id        | Get a feed by ID                                  |
 | PUT    | /feed/\:id        | Update a feed (auth)                              |
 | DELETE | /feed/\:id        | Delete a feed (auth)                              |
+
+### Cursor pagination (API change)
+
+`/feed/paginated` and `/comment/paginated` now accept `cursor` and `limit` (default 10; range 1-100). Comments also require `id`, the feed ID.
+
+```bash
+# First page; use /api prefix through the gateway.
+curl 'http://localhost:2000/api/feed/paginated?limit=10'
+# Next page: copy meta.nextCursor from the previous response.
+curl 'http://localhost:2000/api/feed/paginated?limit=10&cursor=YOUR_NEXT_CURSOR'
+```
+
+Responses retain `data` and `meta.limit`/`meta.hasMore`, replacing `meta.page` with `meta.nextCursor`. Stop when `hasMore` is false (`nextCursor` is omitted). Cursor continuation still works if the record encoded by that cursor was deleted. A cursor from another list/feed, malformed cursor, duplicate cursor/limit, or invalid limit returns 400. Any `page` parameter now returns 400 rather than silently applying offset pagination. Clients using page numbers must migrate to cursor traversal; random page-number jumps are no longer supported.
+
+For real PostgreSQL tests (rolled back fixtures), run:
+
+```bash
+cd feed-service
+TEST_POSTGRES_DSN='postgres://social:social_local@localhost:5433/social_feed?sslmode=disable' go test -race ./repositories -run TestPostgres
+```
 
 ### Comment
 
 | Method | Endpoint              | Description                                                                |
 | ------ | --------------------- | ---------------------------------------------------------------------------|
 | POST   | /comment/create       | Create a comment on a specific feed (auth)                                 |
-| GET    | /comment/paginated    | Get paginated comments for a feed (with page and limit query)              |
+| GET    | /comment/paginated    | Get comments using id, cursor, and limit              |
 
 ---
 
@@ -251,7 +271,9 @@ The paths below are direct service routes. When using the gateway at `http://loc
 * [x] Per-API Prometheus metrics for gateway, authentication, and feed services
 * [x] Provisioned Grafana dashboard with 5-second auto-refresh
 * [ ] Rate limiting (e.g. IP-based using middleware or Redis)
-* [ ] Database performance tuning (e.g. indexes, query optimization, slow query logging)
+* [x] Request-context propagation to PostgreSQL and Redis
+* [x] Cursor pagination with supporting PostgreSQL indexes
+* [ ] Additional database performance tuning and slow query logging
 
 ---
 

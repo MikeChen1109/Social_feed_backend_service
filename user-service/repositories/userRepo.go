@@ -11,17 +11,17 @@ import (
 )
 
 type UserRepositoryInterface interface {
-	FindByUsername(username string) (*models.User, error)
-	Create(user *models.User) error
-	FindByID(id uint) (*models.User, error)
+	FindByUsername(ctx context.Context, username string) (*models.User, error)
+	Create(ctx context.Context, user *models.User) error
+	FindByID(ctx context.Context, id uint) (*models.User, error)
 }
 
 type UserRepository struct {
 	DB *gorm.DB
 }
 
-func (r *UserRepository) FindByUsername(username string) (*models.User, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func (r *UserRepository) FindByUsername(ctx context.Context, username string) (*models.User, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	db := r.DB.WithContext(ctx)
 	var user models.User
@@ -34,8 +34,8 @@ func (r *UserRepository) FindByUsername(username string) (*models.User, error) {
 	return &user, nil
 }
 
-func (r *UserRepository) Create(user *models.User) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func (r *UserRepository) Create(ctx context.Context, user *models.User) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	db := r.DB.WithContext(ctx)
 	if err := db.Create(user).Error; err != nil {
@@ -44,8 +44,8 @@ func (r *UserRepository) Create(user *models.User) error {
 	return nil
 }
 
-func (r *UserRepository) FindByID(id uint) (*models.User, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func (r *UserRepository) FindByID(ctx context.Context, id uint) (*models.User, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	db := r.DB.WithContext(ctx)
 	var user models.User

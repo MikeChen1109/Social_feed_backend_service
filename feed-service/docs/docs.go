@@ -82,9 +82,9 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "type": "integer",
-                        "description": "Page number",
-                        "name": "page",
+                        "type": "string",
+                        "description": "Opaque nextCursor from the previous response",
+                        "name": "cursor",
                         "in": "query"
                     },
                     {
@@ -96,7 +96,10 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.PaginatedCommentsResponse"
+                        }
                     },
                     "400": {
                         "description": "Bad Request"
@@ -199,9 +202,9 @@ const docTemplate = `{
                 "summary": "Get paginated feeds",
                 "parameters": [
                     {
-                        "type": "integer",
-                        "description": "Page number",
-                        "name": "page",
+                        "type": "string",
+                        "description": "Opaque nextCursor from the previous response",
+                        "name": "cursor",
                         "in": "query"
                     },
                     {
@@ -213,7 +216,13 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.PaginatedFeedsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request"
                     },
                     "500": {
                         "description": "Internal Server Error"
@@ -352,6 +361,47 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "gorm.DeletedAt": {
+            "type": "object",
+            "properties": {
+                "time": {
+                    "type": "string"
+                },
+                "valid": {
+                    "description": "Valid is true if Time is not NULL",
+                    "type": "boolean"
+                }
+            }
+        },
+        "models.Comment": {
+            "type": "object",
+            "properties": {
+                "authorID": {
+                    "type": "integer"
+                },
+                "authorName": {
+                    "type": "string"
+                },
+                "content": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "deletedAt": {
+                    "$ref": "#/definitions/gorm.DeletedAt"
+                },
+                "feedID": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "updatedAt": {
+                    "type": "string"
+                }
+            }
+        },
         "models.CommentResponse": {
             "type": "object",
             "properties": {
@@ -400,6 +450,41 @@ const docTemplate = `{
                 }
             }
         },
+        "models.Feed": {
+            "type": "object",
+            "properties": {
+                "authorID": {
+                    "type": "integer"
+                },
+                "authorName": {
+                    "type": "string"
+                },
+                "commentsCount": {
+                    "type": "integer"
+                },
+                "content": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "deletedAt": {
+                    "$ref": "#/definitions/gorm.DeletedAt"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string"
+                },
+                "upvotes": {
+                    "type": "integer"
+                }
+            }
+        },
         "models.FeedResponse": {
             "type": "object",
             "properties": {
@@ -429,6 +514,48 @@ const docTemplate = `{
                 },
                 "upvotes": {
                     "type": "integer"
+                }
+            }
+        },
+        "models.Meta": {
+            "type": "object",
+            "properties": {
+                "hasMore": {
+                    "type": "boolean"
+                },
+                "limit": {
+                    "type": "integer"
+                },
+                "nextCursor": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.PaginatedCommentsResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Comment"
+                    }
+                },
+                "meta": {
+                    "$ref": "#/definitions/models.Meta"
+                }
+            }
+        },
+        "models.PaginatedFeedsResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Feed"
+                    }
+                },
+                "meta": {
+                    "$ref": "#/definitions/models.Meta"
                 }
             }
         },

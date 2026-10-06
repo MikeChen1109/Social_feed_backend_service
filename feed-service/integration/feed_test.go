@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"context"
 	"encoding/json"
 	"feed-service/controllers"
 	"feed-service/models"
@@ -15,6 +16,7 @@ import (
 	"gorm.io/gorm"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -66,33 +68,103 @@ func TestAuthorOnlyMutations(t *testing.T) {
 	require.Equal(t, 200, call(r, "DELETE", path, ``, 1).Code)
 	require.Equal(t, 404, call(r, "DELETE", path, ``, 1).Code)
 }
-func TestSecondPageDoesNotOverlapForFeedsAndComments(t *testing.T) {
+
+func TestCursorPaginationSurvivesInsertDeleteAndTimestampsTies(t *testing.T) {
+	for _, kind := range []string{"feeds", "comments"} {
+		t.Run(kind, func(t *testing.T) {
+			r, db := setup(t)
+			stamp := time.Now().UTC().Truncate(time.Microsecond)
+			for i := 0; i < 5; i++ {
+				if kind == "feeds" {
+					require.NoError(t, db.Create(&models.Feed{Model: gorm.Model{CreatedAt: stamp}, AuthorID: 1, Title: "feed", Content: "content"}).Error)
+				} else {
+					require.NoError(t, db.Create(&models.Comment{Model: gorm.Model{CreatedAt: stamp}, FeedID: 1, Content: "comment"}).Error)
+				}
+			}
+			path := "/feed/paginated?limit=2"
+			if kind == "comments" {
+				path = "/comment/paginated?id=1&limit=2"
+			}
+			fetch := func(cursor string) ([]uint, models.Meta) {
+				requestPath := path
+				if cursor != "" {
+					requestPath += "&cursor=" + url.QueryEscape(cursor)
+				}
+				w := call(r, "GET", requestPath, "", 0)
+				require.Equal(t, 200, w.Code, w.Body.String())
+				var result struct {
+					Data []struct{ ID uint }
+					Meta models.Meta
+				}
+				require.NoError(t, json.Unmarshal(w.Body.Bytes(), &result))
+				ids := []uint{}
+				for _, item := range result.Data {
+					ids = append(ids, item.ID)
+				}
+				return ids, result.Meta
+			}
+			first, meta := fetch("")
+			require.Equal(t, []uint{5, 4}, first)
+			require.True(t, meta.HasMore)
+			require.NotEmpty(t, meta.NextCursor)
+			// Remove both already-read records, including the record encoded in the cursor.
+			// Insert one newer item with the same timestamp and one with a later timestamp.
+			if kind == "feeds" {
+				require.NoError(t, db.Delete(&models.Feed{}, []uint{5, 4}).Error)
+				require.NoError(t, db.Create(&models.Feed{Model: gorm.Model{CreatedAt: stamp}, AuthorID: 1, Title: "new"}).Error)
+				require.NoError(t, db.Create(&models.Feed{Model: gorm.Model{CreatedAt: stamp.Add(time.Second)}, AuthorID: 1, Title: "newer"}).Error)
+			} else {
+				require.NoError(t, db.Delete(&models.Comment{}, []uint{5, 4}).Error)
+				require.NoError(t, db.Create(&models.Comment{Model: gorm.Model{CreatedAt: stamp}, FeedID: 1, Content: "new"}).Error)
+				require.NoError(t, db.Create(&models.Comment{Model: gorm.Model{CreatedAt: stamp.Add(time.Second)}, FeedID: 1, Content: "newer"}).Error)
+				require.NoError(t, db.Create(&models.Comment{FeedID: 2, Content: "different feed"}).Error)
+			}
+			second, meta := fetch(meta.NextCursor)
+			require.Equal(t, []uint{3, 2}, second)
+			require.True(t, meta.HasMore)
+			last, meta := fetch(meta.NextCursor)
+			require.Equal(t, []uint{1}, last)
+			require.False(t, meta.HasMore)
+			require.Empty(t, meta.NextCursor)
+			for _, query := range []string{"&page=2", "&cursor=bad", "&limit=0"} {
+				require.Equal(t, 400, call(r, "GET", path+query, "", 0).Code)
+			}
+			wrong := models.EncodeCursor("wrong-scope", stamp, 4)
+			require.Equal(t, 400, call(r, "GET", path+"&cursor="+url.QueryEscape(wrong), "", 0).Code)
+		})
+	}
+}
+
+func TestHTTPDisconnectCancelsRepositoryWork(t *testing.T) {
 	r, db := setup(t)
-	// Equal timestamps verify the ID tie-breaker, not only time sorting.
-	stamp := time.Now()
-	for i := 0; i < 5; i++ {
-		require.NoError(t, db.Create(&models.Feed{Model: gorm.Model{CreatedAt: stamp}, AuthorID: 1, Title: "feed", Content: "content"}).Error)
-		require.NoError(t, db.Create(&models.Comment{Model: gorm.Model{CreatedAt: stamp}, FeedID: 1, Content: "comment"}).Error)
-	}
-	for _, path := range []string{"/feed/paginated?", "/comment/paginated?id=1&"} {
-		ids := map[uint]bool{}
-		for page := 1; page <= 3; page++ {
-			w := call(r, "GET", fmt.Sprintf("%spage=%d&limit=2", path, page), "", 0)
-			require.Equal(t, 200, w.Code)
-			var result struct {
-				Data []struct{ ID uint }
-				Meta models.Meta
-			}
-			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &result))
-			require.Equal(t, page, result.Meta.Page)
-			require.Equal(t, page < 3, result.Meta.HasMore)
-			for _, item := range result.Data {
-				require.False(t, ids[item.ID], "overlapping page item")
-				ids[item.ID] = true
-			}
+	entered := make(chan struct{})
+	stopped := make(chan struct{})
+	require.NoError(t, db.Callback().Query().Before("gorm:query").Register("wait_for_disconnect", func(tx *gorm.DB) {
+		close(entered)
+		<-tx.Statement.Context.Done()
+		tx.AddError(tx.Statement.Context.Err())
+		close(stopped)
+	}))
+	server := httptest.NewServer(r)
+	defer server.Close()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, server.URL+"/feed/", nil)
+	require.NoError(t, err)
+	clientDone := make(chan error, 1)
+	go func() {
+		resp, err := server.Client().Do(req)
+		if resp != nil {
+			resp.Body.Close()
 		}
-		require.Len(t, ids, 5)
+		clientDone <- err
+	}()
+	<-entered
+	cancel()
+	select {
+	case <-stopped:
+	case <-time.After(time.Second):
+		t.Fatal("HTTP cancellation did not reach repository")
 	}
-	require.Equal(t, 400, call(r, "GET", "/comment/paginated?id=-1", "", 0).Code)
-	require.Equal(t, 400, call(r, "GET", "/feed/paginated?page=9223372036854775807&limit=100", "", 0).Code)
+	require.ErrorIs(t, <-clientDone, context.Canceled)
 }
