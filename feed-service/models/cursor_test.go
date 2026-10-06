@@ -21,3 +21,9 @@ func TestCursorRoundTripAndValidation(t *testing.T) {
 		require.Error(t, err)
 	}
 }
+
+func TestCursorRejectsTimestampOutsideDatabaseRange(t *testing.T) {
+	token := EncodeCursor("feeds", time.Date(0, time.January, 1, 0, 0, 0, 0, time.UTC), 1)
+	_, _, err := ParsePagination(url.Values{"cursor": {token}}, "feeds")
+	require.Error(t, err)
+}

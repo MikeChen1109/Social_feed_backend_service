@@ -55,7 +55,7 @@ func ParsePagination(query url.Values, scope string) (*Cursor, int, error) {
 	var cursor Cursor
 	decoder := json.NewDecoder(strings.NewReader(string(data)))
 	decoder.DisallowUnknownFields()
-	if decoder.Decode(&cursor) != nil || decoder.Decode(new(any)) != io.EOF || cursor.Version != 1 || cursor.Scope != scope || cursor.ID == 0 || uint64(cursor.ID) > math.MaxInt64 || cursor.CreatedAt.IsZero() {
+	if decoder.Decode(&cursor) != nil || decoder.Decode(new(any)) != io.EOF || cursor.Version != 1 || cursor.Scope != scope || cursor.ID == 0 || uint64(cursor.ID) > math.MaxInt64 || cursor.CreatedAt.IsZero() || cursor.CreatedAt.UTC().Year() < 1 || cursor.CreatedAt.UTC().Year() > 9999 {
 		return nil, 0, errors.New("invalid cursor for this list")
 	}
 	return &cursor, limit, nil
