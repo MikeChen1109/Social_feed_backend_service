@@ -3,12 +3,12 @@ package main
 import (
 	initializers "api-gateway/initalizers"
 	"api-gateway/middleware"
-	"api-gateway/monitoring"
 	"api-gateway/routes"
 	"context"
 	"log"
 	"net/http"
 	"os"
+	monitoring "social-feed/observability"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -25,7 +25,7 @@ func main() {
 		gin.SetMode(gin.DebugMode)
 	}
 	router := gin.New()
-	metrics := monitoring.New()
+	metrics := monitoring.New("api-gateway")
 	router.Use(metrics.Middleware(), gin.Recovery(), middleware.CORSMiddleware())
 	router.GET("/metrics", metrics.Handler)
 	routes.RegisterRoutes(router)

@@ -83,5 +83,5 @@ for port in (2000, 3000, 4000):
 print('PASS health and readiness for all three services')
 with urlopen(BASE + '/metrics', timeout=5) as response:
     metrics = response.read().decode()
-assert 'http_requests_total ' in metrics and 'http_request_duration_seconds_count ' in metrics
+assert 'http_requests_total{' in metrics and 'http_request_duration_seconds_count{' in metrics
 print('PASS gateway metrics')
